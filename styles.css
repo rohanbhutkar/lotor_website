@@ -46,6 +46,29 @@
   --sky-pad-cap-bottom: 10.5%;
   --sky-map-inv-zoom-floor: 0.57;
   --sky-map-label-max-px: 196px;
+  --viewport-w: 100vw;
+  --viewport-h: 100dvh;
+  --viewport-short: min(100vw, 100dvh);
+  --viewport-long: max(100vw, 100dvh);
+  --home-stage-h: calc(var(--viewport-h) - var(--lotor-header-h, 0px));
+  --home-scene-pad-x: clamp(1rem, 4vw, 2.5rem);
+  --home-scene-pad-bottom: clamp(0.9rem, 3vw, 1.5rem);
+  --home-shell-inline-max: min(92rem, calc(100vw - 2rem));
+  --home-overlay-shell-max: min(36rem, calc(100vw - 1.5rem));
+  --home-panel-inline-max: min(68rem, calc(100vw - 2rem));
+  --home-panel-max-block: calc(var(--home-stage-h) - 1rem);
+  --home-card-gap: clamp(0.75rem, 2vw, 1.25rem);
+  --home-overlay-shell-pad: clamp(0.65rem, 3vw, 1rem);
+  --mobile-shell-inline: clamp(17rem, 92vw, 36rem);
+  --mobile-shell-pad: clamp(0.75rem, 4vw, 1.1rem);
+  --mobile-header-pad-x: clamp(0.9rem, 4.5vw, 1.4rem);
+  --mobile-header-gap: clamp(0.7rem, 3vw, 1rem);
+  --intro-procyon-shift: 12cqi;
+  --intro-vista-w: clamp(9.5rem, 15vw, 14rem);
+  --intro-col-gap: clamp(1.5rem, 3.5vw, 3.25rem);
+  --home-intro-shift-x: 0px;
+  --home-contact-shift-x: 0px;
+  --home-contact-shift-y: 0px;
 }
 
 *,
@@ -417,12 +440,12 @@ html.lotor-home .ambient-layer {
 html.lotor-home .sky-unified image {
   pointer-events: none;
   /* Raster only — whole-.celestial-svg filter would tint foreignObject HTML (#intro-heading, labels) */
-  filter: brightness(1.48) contrast(1.08) saturate(1.08);
+  filter: brightness(1.14) contrast(1.015) saturate(1.01);
 }
 
 @media (prefers-reduced-motion: reduce) {
   html.lotor-home .sky-unified image {
-    filter: brightness(1.63) contrast(1.08) saturate(1.06);
+    filter: brightness(1.18) contrast(1.02) saturate(1.01);
   }
 }
 
@@ -466,8 +489,8 @@ html.lotor-home .home-map-const-labels .home-map-const-label {
 }
 
 html.lotor-home .home-map-const-labels .const-label {
-  max-width: min(var(--sky-map-label-max-px, 196px), 30vmin);
-  min-width: min(var(--sky-map-label-min-px, 108px), var(--sky-map-label-min-vw-cap, 28vw));
+  max-width: var(--sky-map-label-max-px, 196px);
+  min-width: var(--sky-map-label-min-px, 108px);
   padding: var(--sky-map-label-padding, 0.55rem 0.72rem);
   box-sizing: border-box;
 }
@@ -493,8 +516,8 @@ html.lotor-home .home-map-const-labels .const-label__more {
 
 /* Capabilities only: larger cards + type (Orion); quals keep defaults above */
 html.lotor-home .home-map-const-labels[data-fo-labels="capabilities"] .const-label {
-  max-width: min(240px, 36vmin);
-  min-width: min(122px, 32vw);
+  max-width: var(--home-cap-label-max-px, 240px);
+  min-width: var(--home-cap-label-min-px, 122px);
   padding: 0.68rem 0.88rem;
 }
 
@@ -519,9 +542,9 @@ html.lotor-home .home-map-const-labels[data-fo-labels="capabilities"] .const-lab
 
 /* Qualifications: same footprint L/R (overrides global .const-label--* asymmetric padding / text-align). */
 html.lotor-home .home-map-const-labels[data-fo-labels="quals"] .const-label {
-  width: min(222px, 34vmin);
-  max-width: min(222px, 34vmin);
-  min-width: min(120px, 29vw);
+  width: var(--home-qual-label-w-px, 222px);
+  max-width: var(--home-qual-label-w-px, 222px);
+  min-width: var(--home-qual-label-min-px, 120px);
   min-height: 7.5rem;
   box-sizing: border-box;
 }
@@ -590,6 +613,8 @@ html.lotor-home .home-fo {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   margin: 0;
   font-family: var(--font-body);
   font-size: clamp(15px, 2.1vmin, 17px);
@@ -606,7 +631,7 @@ html.lotor-home .home-fo__panel {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  min-height: min(100%, 100vh);
+  min-height: min(100%, var(--viewport-h));
   padding: clamp(0.65rem, 1.6vmin, 1rem) clamp(0.75rem, 2vmin, 1.15rem);
   border: none;
   border-radius: 0;
@@ -630,6 +655,7 @@ html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__panel {
   min-height: 0;
   height: auto;
   flex: 0 1 auto;
+  width: min(100%, var(--home-panel-inline-max));
 }
 
 @supports (zoom: 1) {
@@ -693,11 +719,9 @@ html.lotor-home .home-fo--intro {
   justify-content: center;
   align-items: center;
   min-height: 100%;
-  min-height: 100svh;
+  min-height: var(--home-stage-h);
   padding-block: clamp(1.25rem, 5svh, 3rem);
   padding-inline: clamp(0.65rem, 2vmin, 1.1rem) clamp(1rem, 3.8vw, 2.5rem);
-  /* Slide hero + CTAs right so vista lines up on Procyon (map x vs symmetric grid); tune in cqi */
-  --intro-procyon-shift-cqi: 12;
   /* Base .home-fo uses overflow-x: hidden — that clips shifted hero copy; keep vertical scroll only */
   overflow-x: visible;
   overflow-y: auto;
@@ -705,7 +729,8 @@ html.lotor-home .home-fo--intro {
 
 html.lotor-home .home-fo--intro .home-fo__panel--hero {
   width: 100%;
-  max-width: min(92rem, 100%);
+  max-width: min(var(--home-shell-inline-max), 100%);
+  max-height: none;
   flex: 0 1 auto;
   min-height: 0;
   height: auto;
@@ -715,10 +740,22 @@ html.lotor-home .home-fo--intro .home-fo__panel--hero {
   flex-direction: column;
   justify-content: center;
   gap: clamp(1.25rem, 3.5svh, 2.25rem);
-  transform: scale(max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))));
   transform-origin: center center;
   overflow: visible;
   padding-inline: clamp(0.85rem, 2vmin, 1.35rem);
+}
+
+@supports (zoom: 1) {
+  html.lotor-home .home-fo--intro .home-fo__panel--hero {
+    zoom: max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1))));
+    transform: none;
+  }
+}
+
+@supports not (zoom: 1) {
+  html.lotor-home .home-fo--intro .home-fo__panel--hero {
+    transform: scale(max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))));
+  }
 }
 
 html.lotor-home .home-fo__panel--hero {
@@ -729,9 +766,6 @@ html.lotor-home .home-fo__panel--hero {
 }
 
 html.lotor-home .home-fo--intro .intro-hero {
-  /* Text columns steal width from a slimmer vista; minmax floors keep prose from collapsing */
-  --intro-vista-w: clamp(9.5rem, 15vw, 14rem);
-  --intro-col-gap: clamp(1.5rem, 3.5vw, 3.25rem);
   display: grid;
   grid-template-columns: minmax(11.5rem, 1.35fr) var(--intro-vista-w) minmax(11.5rem, 1.35fr);
   column-gap: var(--intro-col-gap);
@@ -746,7 +780,7 @@ html.lotor-home .home-fo--intro .intro-hero {
 @supports (width: 1cqi) {
   html.lotor-home .home-fo--intro .intro-hero,
   html.lotor-home .home-fo--intro .home-fo__panel--hero > .hero-cta--below-start {
-    transform: translateX(calc(var(--intro-procyon-shift-cqi, 19.25) * 1cqi));
+    transform: translateX(var(--intro-procyon-shift));
   }
 }
 
@@ -882,57 +916,93 @@ html.lotor-home .home-fo--intro .hero-cta--below-start .btn {
   text-align: center;
 }
 
-@media (max-width: 900px) {
-  html.lotor-home .home-fo--intro .intro-hero,
-  html.lotor-home .home-fo--intro .home-fo__panel--hero > .hero-cta--below-start {
-    transform: none;
-  }
-
-  html.lotor-home .home-fo--intro .intro-hero {
-    grid-template-columns: 1fr;
-  }
-
-  html.lotor-home .home-fo--intro .intro-hero__vista {
-    display: none;
-  }
-
-  html.lotor-home .home-fo--intro .intro-hero__brand,
-  html.lotor-home .home-fo--intro .intro-hero__story {
-    justify-self: center;
-    align-items: center;
-    max-width: min(40rem, 100%);
-    padding-inline: 0;
-  }
-
-  html.lotor-home .home-fo--intro .intro-hero__brand {
-    align-items: center;
-  }
-
-  html.lotor-home .home-fo--intro .intro-hero__brand .hero-site-title,
-  html.lotor-home .home-fo--intro .intro-hero__brand .hero-subtitle {
-    text-align: center;
-  }
-
-  html.lotor-home .home-fo--intro .hero-subtitle {
-    margin-inline: auto;
-    max-width: 36rem;
-  }
-
-  html.lotor-home .home-fo--intro .intro-hero__story {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding-top: clamp(1rem, 2.5vw, 1.35rem);
-  }
-
-  html.lotor-home .home-fo--intro .hero-cta--below-start {
-    justify-content: center;
-    padding-inline-start: 0;
-  }
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .home-fo__panel--hero {
+  width: min(100%, var(--mobile-shell-inline));
+  margin-inline: auto;
+  align-items: center;
 }
 
-@media (max-width: 720px) {
-  html.lotor-home .home-fo--intro {
-    padding-inline: clamp(0.35rem, 1.5vmin, 0.75rem);
-  }
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero,
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .home-fo__panel--hero > .hero-cta--below-start {
+  transform: none;
+}
+
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero {
+  width: 100%;
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero__vista {
+  display: none;
+}
+
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero__brand,
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero__story {
+  justify-self: center;
+  align-items: center;
+  width: 100%;
+  max-width: min(100%, var(--mobile-shell-inline));
+  padding-inline: 0;
+}
+
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero__brand {
+  align-items: center;
+}
+
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero__brand .hero-site-title,
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero__brand .hero-subtitle {
+  text-align: center;
+}
+
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .hero-subtitle {
+  margin-inline: auto;
+  max-width: min(100%, calc(var(--mobile-shell-inline) - clamp(0.5rem, 2vw, 1.25rem)));
+}
+
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero__story {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: clamp(1rem, 2.5vw, 1.35rem);
+}
+
+html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .hero-cta--below-start {
+  justify-content: center;
+  width: 100%;
+  padding-inline-start: 0;
+}
+
+html.lotor-home[data-home-intro-density="compact"] .home-fo--intro {
+  padding-inline: clamp(0.35rem, 1.5vmin, 0.75rem);
+}
+
+html.lotor-home[data-home-intro-density="compact"] .home-fo--intro .home-fo__panel--hero {
+  gap: 1rem;
+  padding-inline: 0.35rem;
+}
+
+html.lotor-home[data-home-intro-density="compact"] .home-fo--intro .hero-site-title {
+  font-size: clamp(2.6rem, 17vw, 4.6rem);
+  line-height: 1;
+}
+
+html.lotor-home[data-home-intro-density="compact"] .home-fo--intro .hero-subtitle {
+  font-size: clamp(0.96rem, 4.2vw, 1.12rem);
+  line-height: 1.45;
+}
+
+html.lotor-home[data-home-intro-density="compact"] .home-fo--intro .intro-hero__story {
+  font-size: clamp(0.96rem, 4vw, 1.04rem);
+  line-height: 1.62;
+}
+
+html.lotor-home[data-home-intro-density="compact"] .home-fo--intro .hero-cta--below-start {
+  width: min(100%, calc(var(--mobile-shell-inline) - clamp(0.25rem, 2vw, 0.75rem)));
+  margin-inline: auto;
+  gap: 0.65rem;
+}
+
+html.lotor-home[data-home-intro-density="compact"] .home-fo--intro .hero-cta--below-start .btn {
+  width: 100%;
 }
 
 html.lotor-home .home-fo .hero-cta {
@@ -1005,6 +1075,10 @@ html.lotor-home .home-scroll-sentinel {
   pointer-events: none;
 }
 
+html.lotor-home .home-mobile-stack {
+  display: none;
+}
+
 /* Scale only — translate() on the <img> exposed void at the viewport edge (e.g. left strip). */
 @keyframes celestial-drift {
   0% {
@@ -1027,7 +1101,7 @@ html.lotor-home .home-scroll-sentinel {
     radial-gradient(ellipse 100% 80% at 100% 45%, rgba(130, 168, 220, 0.07) 0%, transparent 48%),
     radial-gradient(ellipse 80% 55% at 48% 105%, rgba(var(--gold-rgb), 0.06) 0%, transparent 42%);
   mix-blend-mode: screen;
-  opacity: 0.85;
+  opacity: 0.58;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -2963,8 +3037,49 @@ html.lotor-home #quals.panel.const-section {
 }
 
 @media (max-width: 768px) {
+  .site-header {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .header-inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--mobile-header-gap);
+    padding: 0.8rem var(--mobile-header-pad-x);
+  }
+
+  #site-nav {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .nav-brand {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .nav-brand__mark {
+    width: clamp(2.2rem, 9vw, 2.5rem);
+    height: clamp(2.2rem, 9vw, 2.5rem);
+  }
+
+  .nav-brand__text {
+    font-size: clamp(0.95rem, 4vw, 1.05rem);
+    letter-spacing: 0.04em;
+  }
+
+  .nav-brand__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   .nav-toggle {
     display: block;
+    flex-shrink: 0;
+    min-height: 2.6rem;
+    padding-inline: clamp(0.75rem, 3.5vw, 0.95rem);
   }
   .nav-links {
     display: none;
@@ -2974,16 +3089,29 @@ html.lotor-home #quals.panel.const-section {
     top: 100%;
     flex-direction: column;
     align-items: stretch;
-    padding: 1rem var(--pad-x);
+    gap: 0.35rem;
+    width: min(100%, var(--mobile-shell-inline));
+    margin-inline: auto;
+    padding: 0.85rem var(--mobile-header-pad-x) max(1rem, env(safe-area-inset-bottom));
     background: rgba(7, 9, 16, 0.94);
     backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px dotted var(--dot);
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
   }
   .site-header.is-open .nav-links {
     display: flex;
   }
   .nav-links a {
-    padding: 0.45rem 0;
+    display: block;
+    padding: 0.7rem 0.1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .nav-links li:last-child a {
+    border-bottom: 0;
   }
 }
 
@@ -3125,21 +3253,21 @@ html.lotor-home .ambient-layer {
    * and smears zoom/pan; parallax must stay instant.
    */
   html.lotor-home.lotor-sky-ready[data-sky-transform-ease="1"] .fixed-celestial > .celestial-mover {
-    transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: none;
   }
 
   html.lotor-sky-pulse .fixed-celestial > .celestial-mover .sky-unified > image {
-    animation: lotor-sky-pulse-bright 0.22s ease-out;
+    animation: none;
   }
 }
 
 @keyframes lotor-sky-pulse-bright {
   0%,
   100% {
-    filter: brightness(1.48) contrast(1.08) saturate(1.08);
+    filter: brightness(1.14) contrast(1.015) saturate(1.01);
   }
   50% {
-    filter: brightness(1.78) contrast(1.1) saturate(1.12);
+    filter: brightness(1.22) contrast(1.02) saturate(1.02);
   }
 }
 
@@ -3169,6 +3297,8 @@ html.lotor-home .home-scrollport {
   right: 0;
   top: var(--lotor-header-h);
   bottom: 0;
+  height: var(--home-stage-h);
+  min-height: var(--home-stage-h);
   z-index: 1;
   box-sizing: border-box;
   overflow-x: hidden;
@@ -3191,16 +3321,16 @@ html.lotor-home .lotor-scene {
   flex-direction: column;
   box-sizing: border-box;
   /* Exactly one scrollport viewport per section (parent .home-scrollport has definite height) */
-  height: 100%;
-  min-height: 100%;
-  max-height: 100%;
+  height: var(--home-stage-h);
+  min-height: var(--home-stage-h);
+  max-height: var(--home-stage-h);
   flex-shrink: 0;
   scroll-snap-align: start;
   scroll-snap-stop: always;
-  padding-left: var(--pad-x);
-  padding-right: var(--pad-x);
+  padding-left: var(--home-scene-pad-x);
+  padding-right: var(--home-scene-pad-x);
   padding-top: 0;
-  padding-bottom: var(--lotor-scene-pad-bottom);
+  padding-bottom: var(--home-scene-pad-bottom, var(--lotor-scene-pad-bottom));
   opacity: 1;
   visibility: visible;
   /* Pass taps/wheel through to #home-scrollport; interactive copy lives in SVG foreignObject */
@@ -3300,7 +3430,7 @@ html.lotor-home .const-panel--deck {
 
 html.lotor-home .const-deck__grid {
   display: grid;
-  gap: 0.55rem 0.85rem;
+  gap: var(--home-card-gap) var(--home-card-gap);
   grid-template-columns: 1fr;
 }
 
@@ -3317,7 +3447,7 @@ html.lotor-home .const-deck__grid {
 }
 
 html.lotor-home .const-deck__grid--contact {
-  max-width: 44rem;
+  max-width: min(44rem, var(--home-panel-inline-max));
   margin-inline: auto;
 }
 
@@ -3540,6 +3670,259 @@ html.lotor-home .site-footer {
 html.lotor-home .site-footer--home-end {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   background: linear-gradient(180deg, transparent 0%, rgba(10, 12, 18, 0.55) 100%);
+}
+
+html.lotor-home[data-home-box-mode="stacked"] {
+  --lotor-scene-pad-bottom: clamp(0.9rem, 4vw, 1.35rem);
+  --mobile-shell-inline: clamp(17rem, calc(100vw - clamp(1.1rem, 5vw, 2.5rem)), 36rem);
+  --mobile-shell-pad: clamp(0.75rem, 4vw, 1.1rem);
+}
+
+html.lotor-home[data-home-box-band="narrow"][data-home-box-mode="anchored"] {
+  --home-panel-inline-max: min(42rem, calc(100vw - clamp(1.2rem, 5vw, 2.75rem)));
+  --home-overlay-shell-max: min(30rem, calc(100vw - clamp(1rem, 4vw, 2rem)));
+}
+
+html.lotor-home[data-home-box-band="narrow"] .home-fo:not(.home-fo--intro) {
+  padding-block: clamp(0.5rem, 2.2vw, 1rem);
+  padding-inline: clamp(0.35rem, 1.8vw, 0.8rem);
+}
+
+html.lotor-home[data-home-box-band="narrow"] .home-fo:not(.home-fo--intro) .home-fo__panel {
+  width: min(100%, var(--home-panel-inline-max));
+  max-width: min(100%, calc(100vw - clamp(1.1rem, 5vw, 2.4rem)));
+}
+
+html.lotor-home[data-home-box-band="narrow"] .home-map-const-labels[data-fo-labels="capabilities"] .const-label,
+html.lotor-home[data-home-box-band="narrow"] .home-map-const-labels[data-fo-labels="quals"] .const-label {
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24);
+}
+
+html.lotor-home[data-home-box-band="narrow"] .home-map-const-labels[data-fo-labels="capabilities"] .const-label__title,
+html.lotor-home[data-home-box-band="narrow"] .home-map-const-labels[data-fo-labels="quals"] .const-label__title {
+  font-size: clamp(0.84rem, 1.9vw, 1rem);
+}
+
+html.lotor-home[data-home-box-band="narrow"] .home-map-const-labels[data-fo-labels="capabilities"] .const-label__body,
+html.lotor-home[data-home-box-band="narrow"] .home-map-const-labels[data-fo-labels="quals"] .const-label__body {
+  font-size: clamp(0.74rem, 1.55vw, 0.92rem);
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-scrollport {
+  scroll-snap-type: y proximity;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-cap-leaders,
+html.lotor-home[data-home-box-mode="stacked"] .home-quals-leaders {
+  display: none;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-map-label-layer {
+  display: none;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack {
+  display: flex;
+  flex: 1 1 auto;
+  order: -1;
+  width: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.6rem, 3vw, 1rem);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-fo[data-fo-scene="capabilities"],
+html.lotor-home[data-home-box-mode="stacked"] .home-fo[data-fo-scene="quals"] {
+  display: none;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] #capabilities .home-scroll-sentinel,
+html.lotor-home[data-home-box-mode="stacked"] #quals .home-scroll-sentinel {
+  display: none;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(100%, var(--home-overlay-shell-max));
+  max-height: min(100%, calc(var(--home-stage-h) - clamp(1.2rem, 6vw, 2rem)));
+  overflow-y: auto;
+  padding: clamp(0.7rem, 3.5vw, 1rem);
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: calc(var(--radius) + 6px);
+  background:
+    linear-gradient(180deg, rgba(10, 12, 20, 0.72) 0%, rgba(10, 12, 20, 0.88) 100%),
+    rgba(7, 9, 16, 0.82);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .home-map-const-label,
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .home-map-const-label.const-label--left,
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .home-map-const-label.const-label--right {
+  position: static !important;
+  inset: auto !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  transform: none !important;
+  zoom: 1 !important;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .const-label,
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .const-label.const-label--left,
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .const-label.const-label--right {
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid rgba(186, 204, 228, 0.75);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(16, 18, 28, 0.94) 0%, rgba(10, 12, 22, 0.88) 100%);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .const-label::before {
+  display: none;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards a.const-label--link {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 0.95rem 1rem 0.95rem 1.1rem;
+  box-sizing: border-box;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .const-label__title {
+  font-size: clamp(0.95rem, 3.9vw, 1.08rem);
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .const-label__body {
+  font-size: clamp(0.84rem, 3.45vw, 0.98rem);
+  line-height: 1.5;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack__cards .const-label__more {
+  font-size: 0.69rem;
+  letter-spacing: 0.11em;
+}
+
+
+html.lotor-home[data-home-box-mode="stacked"] .home-fo:not(.home-fo--intro) {
+  justify-content: center;
+  padding-block: clamp(0.6rem, 3vw, 1rem);
+  padding-inline: clamp(0.35rem, 2vw, 0.75rem);
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-fo:not(.home-fo--intro) .home-fo__panel {
+  width: min(100%, var(--home-panel-inline-max));
+  margin-inline: auto;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-fo:not(.home-fo--intro) .home-fo__deck-head,
+html.lotor-home[data-home-box-mode="stacked"] .home-fo:not(.home-fo--intro) .const-deck,
+html.lotor-home[data-home-box-mode="stacked"] .home-fo:not(.home-fo--intro) .const-deck__grid {
+  width: 100%;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-fo:not(.home-fo--intro) .home-fo__deck-head {
+  gap: 0.45rem;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-fo[data-fo-scene="contact"] {
+  justify-content: center;
+  padding-inline: 0.5rem;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-fo[data-fo-scene="contact"] .home-fo__panel {
+  width: min(100%, var(--home-panel-inline-max));
+  margin-inline: auto;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-fo[data-fo-scene="contact"] .contact-fo__deck {
+  width: 100%;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-fo[data-fo-scene="contact"] .const-deck__grid--contact {
+  max-width: none;
+  gap: 0.75rem;
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .contact-card {
+  padding: 1rem 1rem 1.05rem;
+  border-radius: calc(var(--radius) + 2px);
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .contact-card__email {
+  width: 100%;
+  justify-content: center;
+}
+
+html.lotor-home[data-home-box-density="compact"] {
+  --mobile-shell-inline: calc(100vw - clamp(1rem, 6vw, 1.5rem));
+  --mobile-shell-pad: clamp(0.65rem, 3.5vw, 0.9rem);
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-map-label-layer {
+  padding: var(--home-overlay-shell-pad);
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-map-const-labels {
+  width: 100%;
+  gap: 0.65rem;
+  padding: clamp(0.65rem, 3.5vw, 0.8rem);
+  border-radius: calc(var(--radius) + 2px);
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-map-const-labels a.const-label--link {
+  padding: 0.88rem 0.92rem 0.92rem 1rem;
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-mobile-stack__cards a.const-label--link {
+  padding: 0.88rem 0.92rem 0.92rem 1rem;
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-map-const-labels .const-label__title {
+  font-size: clamp(0.92rem, 4vw, 1.02rem);
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-mobile-stack__cards .const-label__title {
+  font-size: clamp(0.92rem, 4vw, 1.02rem);
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-map-const-labels .const-label__body {
+  font-size: clamp(0.82rem, 3.55vw, 0.94rem);
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-mobile-stack__cards .const-label__body {
+  font-size: clamp(0.82rem, 3.55vw, 0.94rem);
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-fo[data-fo-scene="contact"] .contact-fo__head {
+  gap: 0.4rem;
+}
+
+html.lotor-home[data-home-box-density="compact"] .contact-card {
+  padding: 0.95rem 1rem;
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-fo--intro .home-fo__panel--hero {
+  width: min(100%, calc(100vw - clamp(0.75rem, 5vw, 1.25rem)));
+}
+
+html.lotor-home[data-home-box-density="compact"] .home-fo--intro .intro-hero__story {
+  text-wrap: pretty;
 }
 
 html.lotor-home .site-footer .footer-inner {
