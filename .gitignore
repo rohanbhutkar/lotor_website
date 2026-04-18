@@ -1,0 +1,3 @@
+node_modules/
+# Hipparcos VizieR dump (~15 MB); regenerate with curl, see assets/build_hip_layer.py
+assets/hipparcos_cache.tsv

@@ -1,0 +1,3724 @@
+/* lotor lab — panels, constellation sections, fixed SVG sky */
+
+:root {
+  /* Single accent ramp: #d6b277 (buttons, borders, links, emphasis) */
+  --sky: #0b0d17;
+  --void: #0a0812;
+  --panel: #0e111a;
+  --elevated: #161b28;
+  --gold: #d6b277;
+  --gold-rgb: 214, 178, 119;
+  --gold-bright: #e8d4aa;
+  --gold-bright-rgb: 232, 212, 170;
+  --gold-deep: #8a6f42;
+  /* "lotor lab" wordmark — matches .nav-brand */
+  --brand-wordmark: var(--gold);
+  --buff: #e5d3b3;
+  --text: #ddd6cc;
+  --text-dim: rgba(221, 214, 204, 0.78);
+  --frost: #f2f0ec;
+  /* Links: same hue as --gold, readable on void (not cool blue) */
+  --link: rgb(200, 175, 125);
+  --link-hover: var(--gold-bright);
+  --dot: rgba(var(--gold-rgb), 0.35);
+  --edge: rgba(var(--gold-rgb), 0.2);
+  --max: min(1280px, 94vw);
+  --pad-x: clamp(1.25rem, 5vw, 2rem);
+  --section-y: clamp(4rem, 11vw, 8rem);
+  --font-body: "Times New Roman", Times, serif;
+  /* MS David where installed (e.g. Windows); otherwise Times italic */
+  --font-brand: David, "Times New Roman", Times, serif;
+  --radius: 12px;
+  --radius-pill: 999px;
+  /* Flat, airy surfaces — no faux glass depth */
+  --glass-bg: rgba(255, 255, 255, 0.035);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(var(--gold-bright-rgb), 0.35);
+  --glass-shadow: none;
+  --glass-shadow-hover: none;
+  /* 1 = full scrim (intro); drops as we zoom in so the map reads through */
+  --sky-veil: 1;
+  /* Mirrors JS sky zoom on home; foreignObject HTML uses this for inverse UI scale */
+  --sky-zoom: 1;
+  /* main.js syncHomeMapViewportCss — safe padding + min inverse scale for map callouts */
+  --sky-pad-cap-top: 6%;
+  --sky-pad-cap-x: 7%;
+  --sky-pad-cap-bottom: 10.5%;
+  --sky-map-inv-zoom-floor: 0.57;
+  --sky-map-label-max-px: 196px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .fixed-celestial > .celestial-mover {
+    transition: none !important;
+    will-change: auto;
+  }
+  .celestial-svg {
+    animation: none !important;
+    transform: none !important;
+  }
+  /* Inner pages: img or non-home svg; home map keeps filter on <image> only */
+  .celestial-svg:not(.sky-unified) {
+    filter: brightness(1.63) contrast(1.08) saturate(1.06);
+  }
+  html.lotor-home .sky-unified > image {
+    filter: brightness(1.63) contrast(1.08) saturate(1.06);
+  }
+  .scroll-progress__fill {
+    transition: none !important;
+  }
+  .ambient-layer {
+    animation: none !important;
+  }
+  .const-panel__svg .const-lines {
+    animation: none !important;
+  }
+  .scroll-rail__link:hover,
+  .scroll-rail__link:focus-visible {
+    transform: none;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--text);
+  background: var(--void);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.brand-mark {
+  font-family: var(--font-brand);
+  font-style: italic;
+  color: var(--brand-wordmark);
+}
+
+/* Fixed SVG constellation — full viewport, stays bright (panels use light scrims only) */
+.fixed-celestial {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: var(--void);
+  /* Scroll-driven zoom: cover scale + multiplicative zoom (GPU transform only) */
+  --sky-cover: 1;
+  --sky-nx: 0.5;
+  --sky-ny: 0.5;
+  --sky-zoom-mult: 1;
+  --sky-parallax-x: 0px;
+  --sky-parallax-y: 0px;
+}
+
+/* Inner pages: single img fills viewport (object-fit cover) */
+.fixed-celestial > .celestial-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 1;
+  border: 0;
+  pointer-events: none;
+  object-fit: cover;
+  object-position: center;
+  transform-origin: center center;
+  filter: brightness(1.48) contrast(1.08) saturate(1.08);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fixed-celestial:not(:has(.celestial-mover)) > .celestial-svg {
+    animation: celestial-drift 120s linear infinite alternate;
+  }
+}
+
+/* Home: pan/zoom via transform only (no per-frame layout — avoids jitter) */
+.fixed-celestial > .celestial-mover {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--sky-map-w, 1489px) * var(--sky-cover));
+  height: calc(var(--sky-map-h, 1190px) * var(--sky-cover));
+  /* Zoom pivot at horizontal center + vertical center of #home-scrollport (below header), not raw 50vh */
+  /* Pivot uses --sky-layout-* (set in main.js to match layoutViewportDimensions); 50vw/100vh alone diverge on mobile vs innerHeight */
+  transform: translate3d(calc(var(--sky-layout-w, 100vw) * 0.5), calc((var(--sky-layout-h, 100vh) + var(--lotor-header-h, 4.35rem)) * 0.5), 0)
+    scale(var(--sky-zoom-mult))
+    translate3d(
+      calc(-1 * var(--sky-nx) * var(--sky-map-w, 1489px) * var(--sky-cover)),
+      calc(-1 * var(--sky-ny) * var(--sky-map-h, 1190px) * var(--sky-cover)),
+      0
+    );
+  transform-origin: 0 0;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Home: scroll drift is baked into --sky-nx/--sky-ny in main.js (single transform = stable zoom) */
+.fixed-celestial > .celestial-mover > .celestial-parallax {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(var(--sky-parallax-x, 0px), var(--sky-parallax-y, 0px), 0);
+  will-change: transform;
+}
+
+html.lotor-home .fixed-celestial > .celestial-mover > .celestial-parallax {
+  transform: none;
+}
+
+.fixed-celestial > .celestial-mover > .celestial-parallax > .celestial-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 1;
+  border: 0;
+  pointer-events: none;
+  object-fit: fill;
+  object-position: 0 0;
+  transform: none;
+  animation: none;
+  /* Filter lives on .sky-unified > image only so foreignObject HTML (#intro-heading, etc.) matches header color */
+}
+
+/* Unified sky SVG: Hipparcos raster + foreignObject UI (stick figures only inside the image) */
+.home-map-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Home: sky + embedded UI above scrollport; pointer-events pass through to #home-scrollport except links in foreignObject */
+html.lotor-home .fixed-celestial {
+  z-index: 2;
+}
+
+/*
+ * Label precompute cycles capabilities/quals overlay groups; without this those scenes flash on screen for a frame.
+ * Opacity 0 keeps layout/paint geometry for relax(); ambient layer (above) still shows so the page doesn’t “white flash”.
+ */
+html.lotor-home[data-home-sky-precompute="1"] .fixed-celestial {
+  opacity: 0;
+  transition: none;
+}
+
+html.lotor-home[data-home-sky-precompute="1"] .fixed-celestial > .celestial-mover {
+  transition: none !important;
+}
+
+html.lotor-home .ambient-layer {
+  z-index: 3;
+}
+
+html.lotor-home .sky-unified image {
+  pointer-events: none;
+  /* Raster only — whole-.celestial-svg filter would tint foreignObject HTML (#intro-heading, labels) */
+  filter: brightness(1.48) contrast(1.08) saturate(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.lotor-home .sky-unified image {
+    filter: brightness(1.63) contrast(1.08) saturate(1.06);
+  }
+}
+
+html.lotor-home .sky-unified foreignObject {
+  pointer-events: auto;
+}
+
+/* Full-viewBox callouts over the raster map (capabilities / quals); deck foreignObject stacks above */
+html.lotor-home .home-map-label-layer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  box-sizing: border-box;
+  margin: 0;
+  pointer-events: none;
+}
+
+html.lotor-home .home-map-const-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Safe margin inside the map foreignObject so callouts stay on-screen when zoomed */
+html.lotor-home .home-map-label-layer--pad-cap {
+  box-sizing: border-box;
+  padding: var(--sky-pad-cap-top, 5.5%) var(--sky-pad-cap-x, 6%) var(--sky-pad-cap-bottom, 9%)
+    var(--sky-pad-cap-x, 6%);
+}
+
+html.lotor-home .home-map-label-layer--pad-quals {
+  box-sizing: border-box;
+  /* Same safe rect as capabilities — main.js only sets --sky-pad-cap-*. */
+  padding: var(--sky-pad-cap-top, 5.5%) var(--sky-pad-cap-x, 6%) var(--sky-pad-cap-bottom, 9%)
+    var(--sky-pad-cap-x, 6%);
+}
+
+html.lotor-home .home-map-const-labels .home-map-const-label {
+  pointer-events: auto;
+}
+
+html.lotor-home .home-map-const-labels .const-label {
+  max-width: min(var(--sky-map-label-max-px, 196px), 30vmin);
+  min-width: min(var(--sky-map-label-min-px, 108px), var(--sky-map-label-min-vw-cap, 28vw));
+  padding: var(--sky-map-label-padding, 0.55rem 0.72rem);
+  box-sizing: border-box;
+}
+
+html.lotor-home .home-map-const-labels a.const-label--link {
+  padding: var(--sky-map-label-padding, 0.55rem 0.72rem);
+}
+
+html.lotor-home .home-map-const-labels .const-label__title {
+  font-size: clamp(0.8rem, 1.55vmin, 0.95rem);
+  margin-bottom: 0.28rem;
+}
+
+html.lotor-home .home-map-const-labels .const-label__body {
+  font-size: clamp(0.72rem, 1.35vmin, 0.86rem);
+  line-height: 1.45;
+}
+
+html.lotor-home .home-map-const-labels .const-label__more {
+  margin-top: 0.28rem;
+  font-size: 0.65rem;
+}
+
+/* Capabilities only: larger cards + type (Orion); quals keep defaults above */
+html.lotor-home .home-map-const-labels[data-fo-labels="capabilities"] .const-label {
+  max-width: min(240px, 36vmin);
+  min-width: min(122px, 32vw);
+  padding: 0.68rem 0.88rem;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="capabilities"] a.const-label--link {
+  padding: 0.68rem 0.88rem;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="capabilities"] .const-label__title {
+  font-size: clamp(0.9rem, 1.8vmin, 1.08rem);
+  margin-bottom: 0.32rem;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="capabilities"] .const-label__body {
+  font-size: clamp(0.82rem, 1.55vmin, 0.98rem);
+  line-height: 1.48;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="capabilities"] .const-label__more {
+  font-size: 0.72rem;
+  margin-top: 0.32rem;
+}
+
+/* Qualifications: same footprint L/R (overrides global .const-label--* asymmetric padding / text-align). */
+html.lotor-home .home-map-const-labels[data-fo-labels="quals"] .const-label {
+  width: min(222px, 34vmin);
+  max-width: min(222px, 34vmin);
+  min-width: min(120px, 29vw);
+  min-height: 7.5rem;
+  box-sizing: border-box;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="quals"] .const-label.const-label--left {
+  padding: 0.62rem 0.82rem;
+  border-right: 2px solid rgba(186, 204, 228, 0.78);
+  border-left: none;
+  text-align: left;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="quals"] .const-label.const-label--right {
+  padding: 0.62rem 0.82rem;
+  border-left: 2px solid rgba(186, 204, 228, 0.78);
+  border-right: none;
+  text-align: left;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="quals"] a.const-label--link {
+  padding: 0.62rem 0.82rem;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="quals"] .const-label__title {
+  font-size: clamp(0.82rem, 1.6vmin, 0.96rem);
+  margin-bottom: 0.3rem;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="quals"] .const-label__body {
+  font-size: clamp(0.74rem, 1.4vmin, 0.88rem);
+  line-height: 1.46;
+}
+
+html.lotor-home .home-map-const-labels[data-fo-labels="quals"] .const-label__more {
+  font-size: 0.68rem;
+  margin-top: 0.28rem;
+}
+
+/* Heading + hint sit under map callouts; clicks pass through to labels */
+html.lotor-home .home-fo--map-chrome {
+  pointer-events: none;
+}
+
+html.lotor-home .home-cap-leaders line,
+html.lotor-home .home-quals-leaders line {
+  vector-effect: none;
+}
+
+html.lotor-home .home-capabilities-strip,
+html.lotor-home .home-quals-strip {
+  display: none !important;
+}
+
+html.lotor-home .home-capabilities-strip__title,
+html.lotor-home .home-quals-strip__title {
+  font-family: var(--font-body);
+  font-size: clamp(1.05rem, 2.2vw, 1.55rem);
+  font-weight: 600;
+  color: var(--frost);
+  margin: 0 0 0.2rem;
+  line-height: 1.2;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.65);
+}
+
+/* HTML panels embedded in map space (same zoom/pan as stars) */
+html.lotor-home .home-fo {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: clamp(15px, 2.1vmin, 17px);
+  line-height: 1.65;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Embedded sections: copy on the starfield — no outer glass card (same idea as intro) */
+html.lotor-home .home-fo__panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: min(100%, 100vh);
+  padding: clamp(0.65rem, 1.6vmin, 1rem) clamp(0.75rem, 2vmin, 1.15rem);
+  border: none;
+  border-radius: 0;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* Capabilities / quals / contact: center block in foreignObject; inverse zoom keeps type readable */
+html.lotor-home .home-fo:not(.home-fo--intro) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-block: clamp(0.35rem, 1.2vmin, 0.85rem);
+  padding-inline: clamp(0.25rem, 1vmin, 0.5rem);
+}
+
+html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__panel {
+  min-height: 0;
+  height: auto;
+  flex: 0 1 auto;
+}
+
+@supports (zoom: 1) {
+  html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__panel,
+  html.lotor-home .home-map-const-labels .home-map-const-label {
+    zoom: max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1))));
+  }
+  /*
+   * Contact title + lede: panel inverse-zoom softens type; nested zoom = 1/P so compound ≈ 1× for sharper copy.
+   * P matches .home-fo__panel above.
+   */
+  html.lotor-home .home-fo[data-fo-scene="contact"] .contact-fo__head {
+    zoom: calc(
+      1 / max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1))))
+    );
+  }
+}
+
+@supports not (zoom: 1) {
+  html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__panel {
+    transform: scale(max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))));
+    transform-origin: top center;
+  }
+
+  html.lotor-home .home-fo[data-fo-scene="contact"] .contact-fo__head {
+    transform: scale(
+      calc(1 / max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))))
+    );
+    transform-origin: top center;
+  }
+
+  html.lotor-home .home-map-const-labels .home-map-const-label.const-label--left {
+    transform: translate(0, -50%)
+      scale(max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))));
+  }
+
+  html.lotor-home .home-map-const-labels .home-map-const-label.const-label--right {
+    transform: translate(-100%, -50%)
+      scale(max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))));
+  }
+}
+
+/* Reserve space for fixed .scroll-rail labels (≥900px); rail is z-index above the sky */
+@media (min-width: 900px) {
+  html.lotor-home .home-fo__panel {
+    padding-right: calc(clamp(0.75rem, 2vmin, 1.15rem) + min(6.5rem, 15vw));
+  }
+
+  html.lotor-home .home-fo--intro .home-fo__panel--hero {
+    padding-right: clamp(0.75rem, 2vmin, 1.15rem);
+  }
+}
+
+/* Start page — editorial layout: Procyon in vista; brand & story vertically centered in row, inverse scale vs sky */
+html.lotor-home .home-fo--intro {
+  container-name: introfo;
+  container-type: inline-size;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100%;
+  min-height: 100svh;
+  padding-block: clamp(1.25rem, 5svh, 3rem);
+  padding-inline: clamp(0.65rem, 2vmin, 1.1rem) clamp(1rem, 3.8vw, 2.5rem);
+  /* Slide hero + CTAs right so vista lines up on Procyon (map x vs symmetric grid); tune in cqi */
+  --intro-procyon-shift-cqi: 12;
+  /* Base .home-fo uses overflow-x: hidden — that clips shifted hero copy; keep vertical scroll only */
+  overflow-x: visible;
+  overflow-y: auto;
+}
+
+html.lotor-home .home-fo--intro .home-fo__panel--hero {
+  width: 100%;
+  max-width: min(92rem, 100%);
+  flex: 0 1 auto;
+  min-height: 0;
+  height: auto;
+  margin-block: auto;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(1.25rem, 3.5svh, 2.25rem);
+  transform: scale(max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))));
+  transform-origin: center center;
+  overflow: visible;
+  padding-inline: clamp(0.85rem, 2vmin, 1.35rem);
+}
+
+html.lotor-home .home-fo__panel--hero {
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+html.lotor-home .home-fo--intro .intro-hero {
+  /* Text columns steal width from a slimmer vista; minmax floors keep prose from collapsing */
+  --intro-vista-w: clamp(9.5rem, 15vw, 14rem);
+  --intro-col-gap: clamp(1.5rem, 3.5vw, 3.25rem);
+  display: grid;
+  grid-template-columns: minmax(11.5rem, 1.35fr) var(--intro-vista-w) minmax(11.5rem, 1.35fr);
+  column-gap: var(--intro-col-gap);
+  align-items: stretch;
+  flex: 0 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin-bottom: 0;
+  overflow: visible;
+}
+
+@supports (width: 1cqi) {
+  html.lotor-home .home-fo--intro .intro-hero,
+  html.lotor-home .home-fo--intro .home-fo__panel--hero > .hero-cta--below-start {
+    transform: translateX(calc(var(--intro-procyon-shift-cqi, 19.25) * 1cqi));
+  }
+}
+
+@supports not (width: 1cqi) {
+  html.lotor-home .home-fo--intro .intro-hero,
+  html.lotor-home .home-fo--intro .home-fo__panel--hero > .hero-cta--below-start {
+    transform: translateX(min(18vw, 15rem));
+  }
+}
+
+html.lotor-home .home-fo--intro .intro-hero__vista {
+  pointer-events: none;
+  align-self: stretch;
+  min-height: clamp(7.5rem, 22vh, 11rem);
+}
+
+html.lotor-home .home-fo--intro .intro-hero__brand {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  justify-self: stretch;
+  min-width: 0;
+  max-width: 100%;
+  padding-inline-end: clamp(0.35rem, 1.5vw, 1rem);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+html.lotor-home .home-fo--intro .intro-hero__story {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  justify-self: stretch;
+  align-self: stretch;
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  padding-inline-start: clamp(0.35rem, 1.5vw, 1rem);
+  font-size: clamp(0.98rem, 1.5vw, 1.12rem);
+  line-height: 1.7;
+  font-weight: 450;
+  letter-spacing: 0.01em;
+  color: rgba(245, 242, 236, 0.94);
+  text-align: left;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+html.lotor-home .home-fo--intro .intro-hero__story > p {
+  margin: 0 0 1rem;
+  overflow-wrap: inherit;
+  word-break: normal;
+}
+
+html.lotor-home .home-fo--intro .intro-hero__story .brand-mark {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+html.lotor-home .home-fo--intro .intro-hero__story > p:last-child {
+  margin-bottom: 0;
+}
+
+html.lotor-home .home-fo--intro .intro-hero__closing {
+  color: rgba(250, 246, 238, 0.98);
+  font-style: italic;
+  font-weight: 500;
+  border-left: 3px solid rgba(var(--gold-rgb), 0.55);
+  padding: 0.35rem 0 0.35rem 1.1rem;
+  margin-top: 0.35rem !important;
+}
+
+html.lotor-home .home-fo--intro .intro-hero__brand .hero-site-title,
+html.lotor-home .home-fo--intro .intro-hero__brand .hero-subtitle {
+  text-align: end;
+}
+
+html.lotor-home .home-fo--intro .hero-site-title {
+  font-size: clamp(3.85rem, 13.5vw, 9.25rem);
+  font-weight: 700;
+  margin: 0 0 0.55rem;
+  line-height: 1.06;
+  letter-spacing: -0.052em;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: normal;
+  /* Same wordmark color as .nav-brand (beats .home-fo { color: var(--text) } in embedded SVG UI) */
+  color: var(--brand-wordmark);
+  text-shadow: 0 2px 48px rgba(0, 0, 0, 0.5), 0 0 72px rgba(var(--gold-rgb), 0.14);
+}
+
+html.lotor-home .home-fo--intro .hero-site-title .brand-mark {
+  font-weight: 700;
+  color: var(--brand-wordmark);
+}
+
+html.lotor-home .home-fo--intro .hero-subtitle {
+  font-size: clamp(0.98rem, 1.85vw, 1.28rem);
+  font-weight: 600;
+  line-height: 1.38;
+  letter-spacing: -0.012em;
+  color: rgba(252, 250, 245, 0.96);
+  margin: 0;
+  margin-inline-start: auto;
+  max-width: min(26rem, 100%);
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+html.lotor-home .home-fo--intro .hero-cta--below-start {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  padding-inline: 0;
+  gap: 0.85rem;
+}
+
+html.lotor-home .home-fo--intro .hero-cta--below-start .btn {
+  padding: 0.65rem 1.35rem;
+  font-size: clamp(0.92rem, 1.35vw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  overflow-wrap: break-word;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  html.lotor-home .home-fo--intro .intro-hero,
+  html.lotor-home .home-fo--intro .home-fo__panel--hero > .hero-cta--below-start {
+    transform: none;
+  }
+
+  html.lotor-home .home-fo--intro .intro-hero {
+    grid-template-columns: 1fr;
+  }
+
+  html.lotor-home .home-fo--intro .intro-hero__vista {
+    display: none;
+  }
+
+  html.lotor-home .home-fo--intro .intro-hero__brand,
+  html.lotor-home .home-fo--intro .intro-hero__story {
+    justify-self: center;
+    align-items: center;
+    max-width: min(40rem, 100%);
+    padding-inline: 0;
+  }
+
+  html.lotor-home .home-fo--intro .intro-hero__brand {
+    align-items: center;
+  }
+
+  html.lotor-home .home-fo--intro .intro-hero__brand .hero-site-title,
+  html.lotor-home .home-fo--intro .intro-hero__brand .hero-subtitle {
+    text-align: center;
+  }
+
+  html.lotor-home .home-fo--intro .hero-subtitle {
+    margin-inline: auto;
+    max-width: 36rem;
+  }
+
+  html.lotor-home .home-fo--intro .intro-hero__story {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: clamp(1rem, 2.5vw, 1.35rem);
+  }
+
+  html.lotor-home .home-fo--intro .hero-cta--below-start {
+    justify-content: center;
+    padding-inline-start: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  html.lotor-home .home-fo--intro {
+    padding-inline: clamp(0.35rem, 1.5vmin, 0.75rem);
+  }
+}
+
+html.lotor-home .home-fo .hero-cta {
+  flex-shrink: 0;
+  margin-top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+html.lotor-home .home-fo__deck-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  margin-bottom: 0.25rem;
+}
+
+html.lotor-home .home-fo__deck-head h2 {
+  font-size: clamp(1.25rem, 2.8vw, 1.85rem);
+  margin: 0;
+}
+
+html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__deck-head {
+  justify-content: center;
+  text-align: center;
+}
+
+html.lotor-home .home-fo .const-panel__figcap {
+  margin: 0 0 0.2rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(221, 214, 204, 0.55);
+}
+
+html.lotor-home .home-fo__panel--contact {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+}
+
+html.lotor-home .home-fo__footer {
+  margin-top: auto;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: none;
+}
+
+html.lotor-home .home-fo__footer .footer-inner {
+  font-size: 0.78rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+html.lotor-home .home-fo[data-fo-scene="contact"] .home-fo__footer .footer-inner {
+  justify-content: center;
+  text-align: center;
+}
+
+html.lotor-home .home-scroll-sentinel {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* Scale only — translate() on the <img> exposed void at the viewport edge (e.g. left strip). */
+@keyframes celestial-drift {
+  0% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1.05);
+  }
+}
+
+/* Soft aurora over the starfield — sits above .fixed-celestial, below content */
+.ambient-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 130% 90% at 15% -5%, rgba(var(--gold-rgb), 0.11) 0%, transparent 52%),
+    radial-gradient(ellipse 100% 80% at 100% 45%, rgba(130, 168, 220, 0.07) 0%, transparent 48%),
+    radial-gradient(ellipse 80% 55% at 48% 105%, rgba(var(--gold-rgb), 0.06) 0%, transparent 42%);
+  mix-blend-mode: screen;
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ambient-layer {
+    animation: ambient-breathe 32s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes ambient-breathe {
+  0% {
+    opacity: 0.72;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 0.92;
+    transform: scale(1.04) translate3d(-1.5%, 1%, 0);
+  }
+}
+
+.site-main,
+.site-footer {
+  position: relative;
+  z-index: 1;
+}
+
+h1,
+h2 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--frost);
+  text-wrap: balance;
+}
+
+h3 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--gold);
+  margin: 0 0 0.5rem;
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
+a {
+  color: var(--link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--link-hover);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0.75rem;
+  z-index: 1000;
+  padding: 0.5rem 1rem;
+  background: var(--gold);
+  color: var(--void);
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  left: var(--pad-x);
+  outline: 2px solid var(--frost);
+}
+
+/* Reading progress — thin gold line under header */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 101;
+  height: 2px;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.scroll-progress__fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright));
+  transition: width 0.12s ease-out;
+}
+
+/* Section rail — dots + labels on wide viewports */
+.scroll-rail {
+  position: fixed;
+  right: max(0.75rem, env(safe-area-inset-right));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 50;
+  pointer-events: none;
+}
+
+.scroll-rail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
+.scroll-rail__link {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  text-decoration: none;
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0;
+  transition: color 0.35s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-rail__link:hover,
+.scroll-rail__link:focus-visible {
+  color: var(--gold-bright);
+  outline: none;
+  transform: translateX(-4px);
+}
+
+.scroll-rail__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  transition: background 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s ease,
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+}
+
+.scroll-rail__link:hover .scroll-rail__dot,
+.scroll-rail__link:focus-visible .scroll-rail__dot {
+  background: rgba(var(--gold-rgb), 0.35);
+  border-color: rgba(var(--gold-bright-rgb), 0.55);
+}
+
+.scroll-rail__link.is-active {
+  color: var(--gold-bright);
+}
+
+.scroll-rail__link.is-active .scroll-rail__dot {
+  background: var(--gold);
+  border-color: var(--gold-bright);
+  transform: scale(1.2);
+  box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.22), 0 0 18px rgba(var(--gold-bright-rgb), 0.35);
+}
+
+.scroll-rail__label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+}
+
+@media (min-width: 1200px) {
+  .scroll-rail__link:hover .scroll-rail__label,
+  .scroll-rail__link:focus-visible .scroll-rail__label,
+  .scroll-rail__link.is-active .scroll-rail__label {
+    max-width: 6rem;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .scroll-rail {
+    display: none;
+  }
+}
+
+.section-kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 0.85rem;
+}
+
+.section-kicker--muted {
+  color: rgba(var(--gold-rgb), 0.75);
+}
+
+.panel--hero .panel__inner--hero {
+  position: relative;
+}
+
+/* Per-section constellation panels — catalogue star colour vs #805E27 lines */
+.const-section__lede {
+  margin-top: 0;
+  margin-bottom: clamp(1rem, 2vw, 1.35rem);
+  text-wrap: balance;
+}
+
+.const-section.panel--hero .panel__inner--hero.panel__inner--deck {
+  display: block;
+  padding-block: clamp(1.5rem, 4vw, 2.75rem);
+}
+
+/* Hero typography — Start page: .intro-hero + #intro-heading inside foreignObject */
+.hero-site-title {
+  font-family: var(--font-body);
+  font-style: normal;
+  font-weight: 600;
+  font-size: clamp(3.15rem, 9vw, 5.15rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  color: var(--brand-wordmark);
+  margin: 0 0 1rem;
+  text-shadow: 0 1px 20px rgba(0, 0, 0, 0.35);
+}
+
+.hero-site-title .brand-mark {
+  font-family: var(--font-brand);
+  font-style: italic;
+  font-weight: 600;
+}
+
+.hero-subtitle {
+  font-family: var(--font-body);
+  font-size: clamp(1.02rem, 1.9vw, 1.26rem);
+  font-weight: 500;
+  line-height: 1.42;
+  color: rgba(242, 240, 236, 0.95);
+  margin: 0;
+  max-width: min(38rem, 100%);
+  text-wrap: balance;
+}
+
+.hero-subtitle__break {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .hero-subtitle__break {
+    display: inline;
+  }
+}
+
+.hero-subtitle__rest {
+  display: inline;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.hero-cta--below-start {
+  margin-top: clamp(1.35rem, 3.2vw, 2.25rem);
+  gap: 0.7rem;
+}
+
+.qual-const-img {
+  display: block;
+  width: 100%;
+  height: clamp(220px, 34vw, 380px);
+  object-fit: cover;
+  object-position: var(--qual-sky-pos, 48% 50%);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(6, 8, 14, 0.35);
+}
+
+@keyframes qual-star-glint {
+  0%,
+  100% {
+    filter: brightness(1);
+    opacity: 1;
+  }
+  50% {
+    filter: brightness(1.35);
+    opacity: 0.92;
+  }
+}
+
+/* Hidden source list: toolbar 3×3 grid is built from these nodes in main.js */
+body.page-qual .qual-sky__nodes {
+  display: none;
+}
+
+body.page-qual .qual-sky__nodes li {
+  margin: 0;
+}
+
+body.page-qual .qual-sky-node {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.22rem 0;
+  box-sizing: border-box;
+  font-size: clamp(0.62rem, 0.35vw + 0.52rem, 0.78rem);
+  line-height: 1.35;
+  font-weight: 500;
+  font-family: var(--font-body);
+  text-align: left;
+  text-decoration: none;
+  text-wrap: balance;
+  color: rgba(210, 204, 192, 0.22);
+  border: none;
+  border-radius: 0;
+  background: none;
+  transition: color 0.15s ease;
+}
+
+body.page-qual .qual-sky-node::before {
+  content: "";
+  flex-shrink: 0;
+  width: 4px;
+  height: 4px;
+  margin-top: 0.42em;
+  border-radius: 1px;
+  transform: rotate(45deg);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.06);
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+body.page-qual .qual-sky-node:hover {
+  color: rgba(232, 226, 214, 0.42);
+}
+
+body.page-qual .qual-sky-node:hover::before {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+body.page-qual .qual-sky-node--active {
+  color: rgba(236, 232, 222, 0.9);
+}
+
+body.page-qual .qual-sky-node--active::before {
+  background: rgba(var(--gold-rgb), 0.82);
+  box-shadow: 0 0 10px rgba(var(--gold-rgb), 0.25);
+}
+
+body.page-qual .qual-sky-node--active:hover {
+  color: var(--gold-bright);
+}
+
+body.page-qual .qual-sky-node--active:hover::before {
+  background: rgba(var(--gold-bright-rgb), 0.9);
+}
+
+body.page-qual .qual-sky-node--core {
+  color: rgba(255, 252, 246, 0.97);
+  font-weight: 600;
+}
+
+body.page-qual .qual-sky-node--core::before {
+  width: 5px;
+  height: 5px;
+  background: linear-gradient(135deg, rgba(255, 252, 246, 0.98), rgb(var(--gold-bright-rgb)));
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.25),
+    0 0 12px rgba(var(--gold-bright-rgb), 0.45);
+}
+
+body.page-qual .qual-sky__extra {
+  margin: 0.55rem 0 0;
+  padding: 0;
+  border: none;
+  text-align: left;
+  font-size: clamp(0.6rem, 0.32vw + 0.52rem, 0.74rem);
+  color: rgba(200, 194, 182, 0.55);
+}
+
+body.page-qual .qual-sky__extra::before {
+  content: "Also · ";
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(200, 194, 182, 0.4);
+  margin-right: 0.15rem;
+}
+
+body.page-qual .qual-sky-extra-link {
+  color: rgba(var(--gold-rgb), 0.85);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+body.page-qual .qual-sky-extra-link:hover {
+  color: var(--gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+body.page-qual .qual-sky-extra-link--core {
+  font-weight: 700;
+  color: rgba(var(--gold-bright-rgb), 0.92);
+}
+
+/* Qualification pages: “briefing sheet” shell (see html.page-qual) */
+.qual-page__wrap {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.qual-cap-map {
+  padding: clamp(1.1rem, 2.5vw, 1.45rem) clamp(1rem, 2.5vw, 1.35rem);
+  border-radius: var(--radius);
+  border: 1px solid var(--glass-border);
+  background: linear-gradient(
+    165deg,
+    rgba(8, 10, 18, 0.55) 0%,
+    rgba(12, 14, 24, 0.35) 50%,
+    rgba(8, 10, 18, 0.48) 100%
+  );
+  background-color: rgba(6, 8, 14, 0.35);
+  backdrop-filter: blur(10px) saturate(1.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.qual-cap-map__head {
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qual-cap-map__title {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(var(--gold-rgb), 0.82);
+  margin: 0 0 0.45rem;
+}
+
+.qual-cap-map__hint {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+  max-width: 40rem;
+}
+
+.qual-cap-map__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem 0.65rem;
+}
+
+.qual-cap-map__list li {
+  margin: 0;
+}
+
+.qual-cap-map__list a {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  gap: 0.45rem;
+  min-height: 4.75rem;
+  padding: 0.65rem 0.4rem 0.55rem;
+  font-size: clamp(0.72rem, 1.05vw, 0.82rem);
+  line-height: 1.35;
+  font-weight: 500;
+  color: rgba(201, 194, 184, 0.72);
+  text-decoration: none;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Hipparcos-style diamond “star” above each label */
+.qual-cap-map__list a::before {
+  content: "";
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-top: 0.1rem;
+  background: rgba(var(--gold-rgb), 0.45);
+  transform: rotate(45deg);
+  border-radius: 1px;
+  opacity: 0.45;
+  box-shadow: none;
+  transition: opacity 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.qual-cap-map__list a:hover {
+  color: var(--gold-bright);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.qual-cap-map__list a:hover::before {
+  opacity: 0.95;
+  transform: rotate(45deg) scale(1.08);
+}
+
+.qual-cap-map__link--related {
+  color: var(--frost);
+  font-weight: 600;
+  border-color: rgba(var(--gold-bright-rgb), 0.42);
+  background: rgba(var(--gold-rgb), 0.07);
+  box-shadow: 0 0 0 1px rgba(var(--gold-rgb), 0.12);
+}
+
+.qual-cap-map__link--related::before {
+  opacity: 1;
+  width: 9px;
+  height: 9px;
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+  box-shadow: 0 0 16px rgba(var(--gold-bright-rgb), 0.45), 0 0 28px rgba(var(--gold-rgb), 0.2);
+}
+
+.qual-cap-map__link--related:hover {
+  border-color: rgba(var(--gold-bright-rgb), 0.55);
+  background: rgba(var(--gold-rgb), 0.11);
+}
+
+.qual-page__main {
+  min-width: 0;
+}
+
+.qual-page__body {
+  max-width: 44rem;
+}
+
+/* Standalone capability pages: spacing before the capability grid */
+.cap-page__map {
+  margin-top: clamp(2rem, 5vw, 3.5rem);
+}
+
+/* Capability inner pages: McKinsey-style depth (hero follow + subsection titles) */
+.cap-page__hero-follow {
+  font-size: 1.05rem;
+  line-height: 1.72;
+  color: var(--text-dim);
+  max-width: 36rem;
+  margin: -0.75rem 0 0;
+}
+
+.panel--page-first .cap-page__hero-follow {
+  margin-top: -0.5rem;
+  margin-bottom: 1.35rem;
+}
+
+.qual-page__body .cap-page__h3 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--frost);
+  margin: 1.5rem 0 0.45rem;
+  line-height: 1.35;
+}
+
+/* Capability inner pages (html.page-cap): stronger scrim + long-form legibility over starfield */
+html.page-cap .panel {
+  background: linear-gradient(
+    165deg,
+    rgba(7, 9, 16, calc(0.15 + var(--sky-veil) * 0.24)) 0%,
+    rgba(11, 13, 23, calc(0.1 + var(--sky-veil) * 0.14)) 48%,
+    rgba(7, 9, 16, calc(0.13 + var(--sky-veil) * 0.21)) 100%
+  );
+}
+
+html.page-cap .panel--alt {
+  background: linear-gradient(
+    180deg,
+    rgba(7, 9, 16, calc(0.14 + var(--sky-veil) * 0.2)) 0%,
+    rgba(14, 18, 30, calc(0.1 + var(--sky-veil) * 0.16)) 100%
+  );
+}
+
+html.page-cap .panel--cta {
+  background: linear-gradient(
+    180deg,
+    rgba(7, 9, 16, calc(0.16 + var(--sky-veil) * 0.24)) 0%,
+    rgba(7, 9, 16, calc(0.1 + var(--sky-veil) * 0.18)) 100%
+  );
+}
+
+html.page-cap .qual-page__body {
+  font-size: 1.125rem;
+  line-height: 1.78;
+  max-width: min(48rem, 100%);
+}
+
+html.page-cap .qual-page__body p,
+html.page-cap .qual-bullets {
+  color: rgba(242, 240, 236, 0.95);
+}
+
+html.page-cap .qual-bullets {
+  line-height: 1.74;
+}
+
+html.page-cap .qual-bullets li {
+  margin-bottom: 0.55rem;
+}
+
+html.page-cap .cap-page__hero-follow {
+  color: rgba(242, 240, 236, 0.88);
+  font-size: 1.125rem;
+  line-height: 1.78;
+}
+
+html.page-cap .panel--page-first .lede.lede--narrow {
+  color: var(--frost);
+  font-size: 1.1875rem;
+  line-height: 1.74;
+}
+
+html.page-cap .qual-page__h2 {
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  margin-top: 2rem;
+  margin-bottom: 0.65rem;
+}
+
+html.page-cap .qual-page__body .cap-page__h3 {
+  font-size: 1.09rem;
+  margin-top: 1.65rem;
+  color: var(--frost);
+}
+
+html.page-cap .qual-cap-map__hint {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(242, 240, 236, 0.84);
+}
+
+html.page-cap .qual-cap-map__list a {
+  font-size: clamp(0.8rem, 1.2vw, 0.9rem);
+  line-height: 1.42;
+  color: rgba(220, 214, 206, 0.88);
+}
+
+html.page-cap .qual-cap-map__list a:hover {
+  color: var(--gold-bright);
+}
+
+html.page-cap .panel--page-first h1 {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 2px 24px rgba(0, 0, 0, 0.35);
+}
+
+.qual-page__h2 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(var(--gold-rgb), 0.82);
+  margin: 1.65rem 0 0.55rem;
+}
+
+.qual-page__body p {
+  margin: 0 0 1rem;
+}
+
+.qual-page__body .lede {
+  margin-bottom: 0.5rem;
+}
+
+.qual-bullets {
+  margin: 0 0 1.15rem;
+  padding-left: 1.2rem;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.qual-bullets li {
+  margin-bottom: 0.4rem;
+}
+
+.qual-page__const {
+  margin-top: clamp(2rem, 5vw, 3rem);
+}
+
+.qual-page__const .const-panel {
+  min-height: clamp(260px, 36vw, 400px);
+}
+
+.qual-page__const .const-panel__figcap {
+  text-align: left;
+}
+
+@media (max-width: 1100px) {
+  .qual-cap-map__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .qual-cap-map__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .qual-cap-map__list a {
+    min-height: 4.25rem;
+    font-size: 0.72rem;
+    padding: 0.55rem 0.35rem 0.45rem;
+  }
+}
+
+/* Qualification pages: readable article layout (scroll, no starfield / constellation) */
+html.page-qual {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+html.page-qual body {
+  --qual-sheet-sit: 196, 160, 98;
+  --qual-sheet-app: var(--gold-rgb);
+  --qual-sheet-out: 168, 198, 220;
+  min-height: 100dvh;
+  min-height: 100vh;
+  display: block;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body.page-qual .site-main {
+  display: block;
+  overflow: visible;
+}
+
+body.page-qual .site-footer {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+body.page-qual .panel.panel--page-first.panel--alt {
+  display: block;
+  overflow: visible;
+  min-height: auto;
+  padding-top: calc(var(--section-y) + 2.5rem);
+  padding-bottom: clamp(2rem, 5vw, 3.5rem);
+  background: linear-gradient(180deg, rgba(7, 9, 16, 0.94) 0%, rgba(10, 12, 22, 0.97) 45%, rgba(6, 7, 14, 0.99) 100%);
+}
+
+body.page-qual .panel--page-first > .panel__inner--deck {
+  display: block;
+  overflow: visible;
+  min-height: auto;
+  padding-top: 0;
+  padding-left: clamp(0.5rem, 2vw, 0.75rem);
+  padding-right: clamp(0.5rem, 2vw, 0.75rem);
+}
+
+body.page-qual .qual-page__wrap.qual-sheet {
+  margin-top: 0;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: min(40rem, 100%);
+  display: block;
+  position: relative;
+  isolation: isolate;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  --qual-sheet-sit: 196, 160, 98;
+  --qual-sheet-app: var(--gold-rgb);
+  --qual-sheet-out: 168, 198, 220;
+}
+
+.lotor-detail__body .qual-page__wrap.qual-sheet {
+  --qual-sheet-sit: 196, 160, 98;
+  --qual-sheet-app: var(--gold-rgb);
+  --qual-sheet-out: 168, 198, 220;
+}
+
+body.page-qual .qual-sheet__scale-wrap {
+  position: static;
+  overflow: visible;
+  flex: none;
+  min-height: auto;
+  padding: 0;
+}
+
+body.page-qual .qual-sheet__fit {
+  position: static;
+  left: auto;
+  right: auto;
+  top: auto;
+  width: 100% !important;
+  max-width: none;
+  box-sizing: border-box;
+  padding: 0;
+  transform: none !important;
+  will-change: auto;
+}
+
+/* Deck header mirrors capability inner pages: .page-back-nav + .section-kicker outside the title strip */
+body.page-qual .qual-sheet__fit > .page-back-nav {
+  margin-bottom: 1.25rem;
+}
+
+body.page-qual .qual-sheet__fit > .section-kicker {
+  margin-top: 0;
+}
+
+/* Title row: headline + 3×3 capability dots (same visual band as qual title) */
+.qual-sheet .qual-sheet__title-strip {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem 1rem;
+  min-width: 0;
+}
+
+.qual-sheet .qual-sheet__title-strip .qual-sheet__hero {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 3×3 = nine circular links; source order matches quals/*.html qual-sky__nodes */
+.qual-sheet .qual-sheet__cap-grid {
+  display: grid;
+  grid-template-columns: repeat(3, var(--qual-cap-dot, 2.82rem));
+  grid-template-rows: repeat(3, var(--qual-cap-dot, 2.82rem));
+  gap: 0.2rem;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 0.12rem;
+  width: auto;
+  font-family: var(--font-body);
+}
+
+.qual-sheet .qual-sheet__cap-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--qual-cap-dot, 2.82rem);
+  height: var(--qual-cap-dot, 2.82rem);
+  padding: 0.1rem 0.12rem;
+  text-decoration: none;
+  text-align: center;
+  text-wrap: balance;
+  hyphens: auto;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  overflow: hidden;
+  font-size: clamp(0.3rem, 0.22vw + 0.26rem, 0.46rem);
+  line-height: 1.05;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: rgba(210, 204, 192, 0.38);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(6, 8, 14, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.qual-sheet .qual-sheet__cap-cell:hover {
+  color: rgba(228, 222, 210, 0.72);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(14, 16, 26, 0.75);
+  transform: scale(1.06);
+}
+
+.qual-sheet .qual-sheet__cap-cell:focus-visible {
+  outline: 2px solid rgba(var(--gold-bright-rgb), 0.85);
+  outline-offset: 2px;
+}
+
+.qual-sheet .qual-sheet__cap-cell--active {
+  color: rgba(236, 232, 222, 0.94);
+  font-weight: 600;
+  background: rgba(18, 20, 32, 0.92);
+  border-color: rgba(var(--gold-rgb), 0.5);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(var(--gold-rgb), 0.2);
+}
+
+.qual-sheet .qual-sheet__cap-cell--active:hover {
+  color: var(--gold-bright);
+  border-color: rgba(var(--gold-bright-rgb), 0.55);
+}
+
+.qual-sheet .qual-sheet__cap-cell--core {
+  color: rgba(255, 252, 246, 0.98);
+  font-weight: 600;
+  background: rgba(var(--gold-rgb), 0.22);
+  border-color: rgba(var(--gold-bright-rgb), 0.65);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(var(--gold-bright-rgb), 0.35);
+}
+
+body.page-qual .qual-sheet .qual-sheet__cap-cell {
+  font-size: clamp(0.5rem, 0.65vmin + 0.38rem, 0.74rem);
+  line-height: 1.1;
+  padding: 0.14rem 0.2rem;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+body.page-qual .qual-sheet__grid {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.85rem, 2vw, 1.35rem);
+  align-items: stretch;
+  min-height: 0;
+}
+
+body.page-qual .qual-sheet__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+}
+
+body.page-qual .qual-sheet__intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto;
+  align-items: start;
+  column-gap: clamp(0.65rem, 2.2vw, 1.35rem);
+  row-gap: 0.35rem;
+  min-width: 0;
+}
+
+/* Flatten title strip so headline + 3×3 are intro grid cells (3×3 top-right). */
+body.page-qual .qual-sheet .qual-sheet__title-strip {
+  display: contents;
+}
+
+body.page-qual .qual-sheet__hero {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  border: none;
+  min-width: 0;
+}
+
+body.page-qual .qual-sheet .qual-sheet__cap-grid {
+  --qual-cap-dot: clamp(3.2rem, 9.2vmin, 4.5rem);
+  gap: 0.28rem;
+  grid-column: 2;
+  grid-row: 1;
+  margin-top: 0;
+  justify-self: end;
+  align-self: start;
+}
+
+/* Match .panel--page-first h1 (capability / inner deck pages) */
+body.page-qual .qual-sheet__hero h1 {
+  font-size: clamp(1.65rem, 3.2vw, 2.35rem);
+  font-weight: 600;
+  color: var(--frost);
+  margin: 0 0 1rem;
+  max-width: none;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.22);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  font-family: var(--font-body);
+}
+
+body.page-qual .qual-sheet__sky {
+  margin: 0.15rem 0 0;
+  padding: 0 0 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.page-qual .qual-sheet__triptych--detail {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.25rem, 3vw, 2rem);
+  align-items: stretch;
+  padding-top: 1.15rem;
+}
+
+/* FAB stick figure (constellationship.fab) in map-scaled space; preserveAspectRatio xMidYMid meet — not stretched */
+.qual-sheet .qual-sheet__triptych--const {
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.28rem 0.55rem;
+  padding-top: 0.08rem;
+}
+
+.qual-sheet .qual-sheet__const-arc {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: center;
+  width: auto;
+  max-width: 100%;
+  height: clamp(3.4rem, 10vw, 5.25rem);
+  display: block;
+  pointer-events: none;
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .qual-sheet .qual-sheet__const-line {
+    animation: qual-const-arc-drift 26s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qual-sheet .qual-sheet__const-line {
+    animation: none;
+  }
+}
+
+@keyframes qual-const-arc-drift {
+  to {
+    stroke-dashoffset: -45;
+  }
+}
+
+.qual-sheet .qual-sheet__const-line {
+  fill: none;
+  stroke: #b19971;
+  stroke-width: 1.32;
+  stroke-dasharray: 1.75 8.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.88;
+  vector-effect: non-scaling-stroke;
+}
+
+.qual-sheet .qual-sheet__const-leader {
+  fill: none;
+  stroke: rgba(177, 153, 113, 0.5);
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.qual-sheet .qual-sheet__const-label {
+  font-family: var(--font-body);
+  font-size: clamp(0.44rem, 0.18vw + 0.36rem, 0.64rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  fill: rgba(232, 224, 208, 0.82);
+  paint-order: stroke fill;
+  stroke: rgba(8, 10, 18, 0.5);
+  stroke-width: 0.4px;
+}
+
+.qual-sheet .qual-sheet__triptych--const > .qual-sheet__lane--situation {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.qual-sheet .qual-sheet__triptych--const > .qual-sheet__lane--approach {
+  grid-row: 2;
+  grid-column: 2;
+}
+
+.qual-sheet .qual-sheet__triptych--const > .qual-sheet__lane--outcome {
+  grid-row: 2;
+  grid-column: 3;
+}
+
+body.page-qual .qual-sheet__lane {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0 1.2rem;
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  transition: border-color 0.2s ease;
+}
+
+body.page-qual .qual-sheet__lane:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+body.page-qual .qual-sheet__lane::before {
+  display: none;
+}
+
+.qual-sheet .qual-sheet__lane-head {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  margin: 0;
+  padding-bottom: 0.22rem;
+  border-bottom: 1px solid rgba(var(--lane-rgb), 0.32);
+}
+
+.qual-sheet .qual-sheet__lane-star {
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  border-radius: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(255, 255, 255, 0.48) 45%,
+    rgb(var(--lane-rgb)) 100%
+  );
+  box-shadow: 0 0 8px rgba(var(--lane-rgb), 0.42);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .qual-sheet .qual-sheet__lane-star {
+    animation: qual-star-glint 5s ease-in-out infinite;
+  }
+
+  .qual-sheet .qual-sheet__lane--approach .qual-sheet__lane-star {
+    animation-delay: 0.65s;
+  }
+
+  .qual-sheet .qual-sheet__lane--outcome .qual-sheet__lane-star {
+    animation-delay: 1.3s;
+  }
+}
+
+body.page-qual .qual-sheet__lane--situation {
+  --lane-rgb: var(--qual-sheet-sit);
+}
+
+body.page-qual .qual-sheet__lane--approach {
+  --lane-rgb: var(--qual-sheet-app);
+}
+
+body.page-qual .qual-sheet__lane--outcome {
+  --lane-rgb: var(--qual-sheet-out);
+}
+
+.qual-sheet .qual-sheet__lane-head .qual-page__h2 {
+  margin: 0;
+  padding: 0;
+  border: none;
+  flex: 1;
+  min-width: 0;
+  font-size: clamp(0.52rem, 0.3vw + 0.46rem, 0.66rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(var(--lane-rgb), 0.98);
+  font-family: var(--font-body);
+}
+
+body.page-qual .qual-sheet .qual-sheet__lane-head {
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.1rem;
+  border-bottom-width: 1px;
+}
+
+body.page-qual .qual-sheet .qual-sheet__lane-head .qual-page__h2 {
+  font-size: clamp(0.95rem, 0.85vw + 0.78rem, 1.2rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+/* Lanes without lane-head (legacy fragments) */
+body.page-qual .qual-sheet__lane > .qual-page__h2:first-child {
+  margin: 0;
+  font-size: clamp(0.52rem, 0.3vw + 0.46rem, 0.66rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(var(--lane-rgb), 0.98);
+  padding-bottom: 0.22rem;
+  border-bottom: 1px solid rgba(var(--lane-rgb), 0.32);
+  font-family: var(--font-body);
+}
+
+body.page-qual .qual-sheet__lane .qual-bullets {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 1.02rem;
+  line-height: 1.68;
+  color: rgba(240, 236, 228, 0.95);
+}
+
+body.page-qual .qual-sheet__lane .qual-bullets li {
+  margin-bottom: 0.65rem;
+}
+
+body.page-qual .qual-sheet__lane .qual-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+body.page-qual .qual-sheet__lane .qual-bullets--outcome {
+  list-style: none;
+  padding-left: 0;
+}
+
+body.page-qual .qual-sheet__lane .qual-bullets--outcome li {
+  position: relative;
+  padding-left: 1rem;
+  margin-bottom: 0.65rem;
+}
+
+body.page-qual .qual-sheet__lane .qual-bullets--outcome li:last-child {
+  margin-bottom: 0;
+}
+
+body.page-qual .qual-sheet__lane .qual-bullets--outcome li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.42em;
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  transform: rotate(45deg);
+  background: var(--gold);
+}
+
+/* Modal: same sheet, flex height from dialog body */
+.lotor-detail__body:has(.qual-sheet) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem var(--pad-x) 0.65rem;
+}
+
+.lotor-detail__body:has(.qual-sheet) .qual-page__wrap.qual-sheet {
+  flex: 1;
+  min-height: 0;
+  max-width: min(1200px, var(--max));
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 520px) {
+  .qual-sheet .qual-sheet__triptych--const {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto repeat(3, auto);
+  }
+
+  .qual-sheet .qual-sheet__const-arc {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .qual-sheet .qual-sheet__triptych--const > .qual-sheet__lane--situation {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .qual-sheet .qual-sheet__triptych--const > .qual-sheet__lane--approach {
+    grid-row: 3;
+    grid-column: 1;
+  }
+
+  .qual-sheet .qual-sheet__triptych--const > .qual-sheet__lane--outcome {
+    grid-row: 4;
+    grid-column: 1;
+  }
+
+  .qual-sheet .qual-sheet__title-strip {
+    flex-wrap: wrap;
+  }
+
+  .qual-sheet .qual-sheet__cap-grid {
+    margin-top: 0;
+    margin-left: auto;
+    --qual-cap-dot: 2.58rem;
+  }
+
+  body.page-qual .qual-sheet .qual-sheet__cap-grid {
+    --qual-cap-dot: clamp(2.95rem, 26vw, 4.2rem);
+  }
+
+  body.page-qual .qual-sheet__intro {
+    grid-template-columns: 1fr;
+  }
+
+  body.page-qual .qual-sheet__hero {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  body.page-qual .qual-sheet .qual-sheet__cap-grid {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: end;
+  }
+
+}
+
+/* Section titles: title block + lede as a split band */
+.deck-header-aside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, min(32vw, 22rem));
+  gap: 1rem 2.5rem;
+  align-items: end;
+  margin-bottom: clamp(0.85rem, 2vw, 1.25rem);
+}
+
+.deck-header-aside__lede {
+  margin: 0 !important;
+  text-align: right;
+  align-self: end;
+  text-wrap: balance;
+}
+
+.deck-header-aside__aside {
+  text-align: right;
+  align-self: end;
+}
+
+@media (max-width: 720px) {
+  .deck-header-aside {
+    grid-template-columns: 1fr;
+  }
+
+  .deck-header-aside__lede {
+    text-align: left;
+  }
+
+  .deck-header-aside__aside {
+    text-align: left;
+  }
+}
+
+.const-panel__figcap {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(var(--gold-bright-rgb), 0.5);
+  margin: 0 0 0.45rem;
+  line-height: 1.3;
+  text-align: right;
+}
+
+@media (max-width: 899px) {
+  .const-panel__figcap {
+    text-align: center;
+  }
+}
+
+.const-panel {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: clamp(440px, 54vw, 660px);
+  background: rgba(6, 8, 14, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: none;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* SVG + callouts share one box so label % aligns with scaled star map */
+.const-panel__chart {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.const-panel[data-constellation="capabilities"] .const-panel__chart,
+.const-panel[data-constellation="quals"] .const-panel__chart {
+  inset: 3% 2.5% 6% 2.5%;
+}
+
+.const-panel[data-constellation="contact"] .const-panel__chart {
+  inset: 4% 4% 8% 4%;
+}
+
+.const-panel__chart .const-panel__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.const-panel__chart .const-labels {
+  inset: 0;
+}
+
+.const-panel[data-constellation="capabilities"] {
+  min-height: clamp(520px, 58vw, 720px);
+}
+
+.const-panel[data-constellation="quals"] {
+  min-height: clamp(580px, 64vw, 800px);
+}
+
+.const-panel[data-constellation="capabilities"] .const-label {
+  width: min(300px, 38vw);
+  max-width: min(300px, 38vw);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@supports not (backdrop-filter: blur(6px)) {
+  .const-panel {
+    background: rgba(6, 8, 14, 0.24);
+  }
+}
+
+.const-panel[data-constellation="contact"] {
+  min-height: clamp(300px, 36vw, 440px);
+}
+
+.const-panel__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Constellation stick figures: dashed bronze (chart), readable on scrim */
+.const-panel__svg .const-lines {
+  stroke: #c4a574;
+  stroke-width: 1.5;
+  stroke-dasharray: 1 10;
+  stroke-dashoffset: 0;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.96;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .const-panel__svg .const-lines {
+    animation: const-line-drift 28s linear infinite;
+  }
+}
+
+@keyframes const-line-drift {
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+
+/* Callout leaders: solid, cool — clearly not stick-figure dashes */
+.const-panel__svg .const-leaders {
+  stroke: rgba(186, 204, 228, 0.88);
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.const-panel__svg .const-lines line {
+  vector-effect: non-scaling-stroke;
+}
+
+.const-panel__svg .const-leaders path {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.const-panel__svg .const-stars > g {
+  filter: brightness(1.35) drop-shadow(0 0 3px rgba(255, 252, 245, 0.35));
+}
+
+/* Core + outline same hue; thin stroke avoids “double rim” */
+.const-panel__svg .const-stars use {
+  stroke-width: 0.2 !important;
+  paint-order: stroke fill;
+}
+
+.const-labels {
+  position: absolute;
+  /* Room for larger callouts + chart-facing connector edge without clipping */
+  inset: 5.5% 4% 9% 4%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Callout cards: readable surface + chart-facing edge matches SVG leader stroke */
+.const-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  max-width: min(380px, 50vw);
+  min-width: min(200px, 42vw);
+  pointer-events: auto;
+  padding: 1.05rem 1.2rem;
+  border-radius: var(--radius);
+  background: linear-gradient(
+    145deg,
+    rgba(14, 16, 26, 0.88) 0%,
+    rgba(10, 12, 22, 0.82) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .const-label {
+    background: rgba(14, 16, 26, 0.94);
+  }
+}
+
+.const-label::before {
+  content: "";
+  position: absolute;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--gold-bright-rgb), 0.55) 0%,
+    rgba(var(--gold-rgb), 0.28) 100%
+  );
+  opacity: 1;
+}
+
+/* Leader-line color on the edge that faces the constellation (same hue as .const-leaders) */
+.const-label--left {
+  border-right: 2px solid rgba(186, 204, 228, 0.78);
+  padding-right: 1.35rem;
+}
+
+.const-label--left::before {
+  left: 0;
+}
+
+.const-label--right {
+  border-left: 2px solid rgba(186, 204, 228, 0.78);
+  padding-left: 1.35rem;
+}
+
+.const-label--right::before {
+  right: 0;
+  left: auto;
+}
+
+.const-label--below {
+  border-top: 2px solid rgba(186, 204, 228, 0.78);
+  padding-top: 1.15rem;
+}
+
+.const-label--below::before {
+  display: none;
+}
+
+a.const-label--link {
+  padding: 1.05rem 1.2rem;
+}
+
+.const-label--title-only .const-label__title {
+  margin-bottom: 0;
+  line-height: 1.38;
+}
+
+a.const-label--title-only {
+  padding: 0.7rem 1.05rem;
+}
+
+.const-label--left {
+  transform: translate(0, -50%);
+  text-align: left;
+}
+
+.const-label--right {
+  transform: translate(-100%, -50%);
+  text-align: right;
+}
+
+.const-label--top {
+  transform: translate(-50%, 0);
+  text-align: center;
+}
+
+.const-label--below {
+  transform: translate(-50%, 0);
+  top: auto !important;
+  bottom: 0;
+  text-align: center;
+  padding-bottom: 1rem;
+  min-width: min(260px, 88%);
+  max-width: min(420px, 92%);
+}
+
+.const-label__title {
+  font-family: var(--font-body);
+  font-size: clamp(0.94rem, 1.25vw, 1.08rem);
+  font-weight: 600;
+  color: var(--gold-bright);
+  margin: 0 0 0.4rem;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  text-shadow: none;
+}
+
+.const-label__body {
+  font-size: clamp(0.88rem, 1.12vw, 1.02rem);
+  line-height: 1.58;
+  margin: 0;
+  color: rgba(236, 232, 224, 0.93);
+  text-shadow: none;
+}
+
+.const-label__body--rich {
+  font-size: clamp(0.9rem, 1.14vw, 1.04rem);
+  line-height: 1.58;
+  margin: 0;
+  color: rgba(242, 240, 236, 0.94);
+  text-shadow: none;
+}
+
+.const-label .btn {
+  font-size: 0.84rem;
+  padding: 0.42rem 0.95rem;
+}
+
+.const-label__body--rich .btn {
+  margin-top: 0.2rem;
+  margin-right: 0.35rem;
+}
+
+.const-label__body--rich span {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.92em;
+  color: var(--text-dim);
+}
+
+.const-label__body--rich a:not(.btn) {
+  color: var(--link);
+}
+
+.const-label__body--rich a:not(.btn):hover {
+  color: var(--link-hover);
+}
+
+a.const-label--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius);
+  transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+a.const-label--link:hover {
+  opacity: 1;
+  background: linear-gradient(145deg, rgba(22, 24, 36, 0.92) 0%, rgba(14, 16, 28, 0.88) 100%);
+  border-color: rgba(var(--gold-bright-rgb), 0.28);
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(var(--gold-rgb), 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+a.const-label--link:hover .const-label__title {
+  color: var(--gold);
+}
+
+a.const-label--link:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+.const-label__more {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(var(--gold-bright-rgb), 0.78);
+  text-shadow: none;
+}
+
+.page-back-nav {
+  margin-bottom: 1.25rem;
+}
+
+.page-back {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--link);
+  text-decoration: none;
+}
+
+.page-back:hover {
+  color: var(--link-hover);
+}
+
+#capabilities h2,
+#quals h2,
+#contact h2#contact-heading {
+  font-size: clamp(1.85rem, 3.5vw, 2.65rem);
+  font-weight: 600;
+  color: var(--frost);
+  margin: 0 0 0.65rem;
+  text-shadow: 0 1px 16px rgba(0, 0, 0, 0.25);
+  max-width: 24ch;
+}
+
+#quals.panel.const-section {
+  padding-top: clamp(5rem, 12vw, 9.5rem);
+  padding-bottom: clamp(5.5rem, 13vw, 10.5rem);
+}
+
+html.lotor-home #quals.panel.const-section {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+@media (max-width: 899px) {
+  .const-panel {
+    min-height: 0;
+  }
+
+  /* Stacked chart + labels on inner pages; home keeps overlay (viewport stage, no in-scene scroll) */
+  html:not(.lotor-home) .const-panel__chart {
+    position: relative;
+    inset: auto !important;
+    width: 100%;
+  }
+
+  html:not(.lotor-home) .const-panel__svg {
+    position: relative;
+    height: min(56vw, 340px);
+    display: block;
+  }
+
+  html:not(.lotor-home) .const-labels {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1rem 0.85rem 1.15rem;
+    pointer-events: auto;
+  }
+
+  html:not(.lotor-home) .const-label,
+  html:not(.lotor-home) .const-label--left,
+  html:not(.lotor-home) .const-label--right,
+  html:not(.lotor-home) .const-label--top,
+  html:not(.lotor-home) .const-label--below {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    max-width: none;
+    min-width: 0;
+    text-align: left;
+    padding: 1rem 1.1rem 1rem 1.15rem;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-left: 3px solid rgba(186, 204, 228, 0.75);
+    border-radius: var(--radius);
+    background: linear-gradient(145deg, rgba(16, 18, 28, 0.92) 0%, rgba(10, 12, 22, 0.88) 100%);
+  }
+
+  html:not(.lotor-home) .const-label--right {
+    border-left: 3px solid rgba(186, 204, 228, 0.75);
+    border-right: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  html:not(.lotor-home) .const-label--below {
+    border-top: 3px solid rgba(186, 204, 228, 0.75);
+    border-left: 1px solid rgba(255, 255, 255, 0.09);
+    padding-top: 1.1rem;
+  }
+
+  html:not(.lotor-home) .const-panel[data-constellation="capabilities"] .const-label {
+    width: auto;
+    max-width: none;
+  }
+
+  html:not(.lotor-home) a.const-label--link {
+    padding: 1rem 1.1rem 1rem 1.15rem;
+  }
+
+  html:not(.lotor-home) .const-label::before {
+    display: none;
+  }
+}
+
+/* Header */
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(7, 9, 16, 0.52);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(14px) saturate(1.08);
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+
+@supports not (backdrop-filter: blur(12px)) {
+  .site-header {
+    background: rgba(7, 9, 16, 0.88);
+  }
+}
+
+.site-header.is-scrolled {
+  background: rgba(7, 9, 16, 0.78);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.header-inner {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0.85rem var(--pad-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+  color: var(--brand-wordmark);
+  text-decoration: none;
+}
+
+.nav-brand__mark {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(var(--gold-rgb), 0.35);
+}
+
+.nav-brand:hover {
+  color: var(--gold-bright);
+}
+
+.nav-brand:hover .brand-mark {
+  color: var(--gold-bright);
+}
+
+.nav-toggle {
+  display: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--frost);
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.nav-toggle:hover {
+  border-color: rgba(var(--gold-bright-rgb), 0.45);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.15rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+}
+
+.nav-links a {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.nav-links a:hover {
+  color: var(--gold-bright);
+}
+
+.nav-links a[aria-current="page"] {
+  color: var(--gold-bright);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(var(--gold-rgb), 0.45);
+  text-underline-offset: 4px;
+}
+
+@media (max-width: 768px) {
+  .nav-toggle {
+    display: block;
+  }
+  .nav-links {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem var(--pad-x);
+    background: rgba(7, 9, 16, 0.94);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px dotted var(--dot);
+  }
+  .site-header.is-open .nav-links {
+    display: flex;
+  }
+  .nav-links a {
+    padding: 0.45rem 0;
+  }
+}
+
+/* Panels — light veils so inline SVG stars stay vivid (--sky-veil thins scrim while zoomed) */
+.panel {
+  position: relative;
+  isolation: isolate;
+  padding: var(--section-y) var(--pad-x);
+  overflow: hidden;
+  scroll-margin-top: 4.5rem;
+  background: linear-gradient(
+    165deg,
+    rgba(7, 9, 16, calc(0.08 + var(--sky-veil) * 0.2)) 0%,
+    rgba(11, 13, 23, calc(0.04 + var(--sky-veil) * 0.1)) 48%,
+    rgba(7, 9, 16, calc(0.07 + var(--sky-veil) * 0.17)) 100%
+  );
+}
+
+.panel--hero {
+  min-height: 100dvh;
+  min-height: 100vh;
+  padding-top: calc(var(--section-y) + 3.25rem);
+  display: flex;
+  align-items: center;
+  background: linear-gradient(
+    105deg,
+    rgba(7, 9, 16, calc(0.12 + var(--sky-veil) * 0.24)) 0%,
+    rgba(11, 13, 23, calc(0.04 + var(--sky-veil) * 0.08)) 42%,
+    rgba(7, 9, 16, calc(0.1 + var(--sky-veil) * 0.2)) 100%
+  );
+}
+
+/* Inner pages: clear fixed header (match hero offset) */
+.panel--page-first {
+  padding-top: calc(var(--section-y) + 3.25rem);
+}
+
+.panel--page-first h1 {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 600;
+  color: var(--frost);
+  margin: 0 0 1rem;
+  max-width: 32ch;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.22);
+}
+
+.panel--alt {
+  background: linear-gradient(
+    180deg,
+    rgba(7, 9, 16, calc(0.08 + var(--sky-veil) * 0.16)) 0%,
+    rgba(14, 18, 30, calc(0.06 + var(--sky-veil) * 0.12)) 100%
+  );
+}
+
+.panel--cta {
+  min-height: 55vh;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(
+    180deg,
+    rgba(7, 9, 16, calc(0.12 + var(--sky-veil) * 0.2)) 0%,
+    rgba(7, 9, 16, calc(0.06 + var(--sky-veil) * 0.14)) 100%
+  );
+}
+
+.panel__inner {
+  position: relative;
+  z-index: 2;
+  max-width: var(--max);
+  margin: 0 auto;
+  width: 100%;
+}
+
+.panel__inner--hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.panel__inner--narrow {
+  max-width: min(560px, var(--max));
+}
+
+/* Contact: slightly wider so the two-star constellation + labels breathe */
+#contact .panel__inner--deck.panel__inner--narrow {
+  max-width: min(720px, var(--max));
+}
+
+.panel__inner--deck {
+  max-width: min(1280px, var(--max));
+}
+
+html.sky-journey:not(.lotor-home) .panel[data-scroll-section] > .panel__inner {
+  will-change: opacity;
+  animation: none !important;
+}
+
+/* ─── Home: fixed scrollport under header (one map space; no doc scroll / double offset) ─── */
+html.lotor-home {
+  /* --lotor-header-h overridden in px by main.js from measured .site-header */
+  --lotor-header-h: 4.35rem;
+  --lotor-scene-pad-bottom: clamp(1.25rem, 4vmin, 2.75rem);
+  --ambient-scroll: 0;
+}
+
+html.lotor-home,
+html.lotor-home body {
+  min-height: 100%;
+  height: 100%;
+}
+
+html.lotor-home body {
+  overflow: hidden;
+}
+
+html.lotor-home .scroll-progress {
+  display: block;
+}
+
+html.lotor-home .ambient-layer {
+  animation: none;
+  opacity: calc(0.72 + var(--ambient-scroll) * 0.2);
+  transform: none;
+  transition: opacity 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.lotor-home .ambient-layer {
+    opacity: 0.85;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * Ease only when JS sets data-sky-transform-ease (scene change, resize, detail open).
+   * Scroll-driven applySky updates nx/ny every frame — a permanent transition here races
+   * and smears zoom/pan; parallax must stay instant.
+   */
+  html.lotor-home.lotor-sky-ready[data-sky-transform-ease="1"] .fixed-celestial > .celestial-mover {
+    transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html.lotor-sky-pulse .fixed-celestial > .celestial-mover .sky-unified > image {
+    animation: lotor-sky-pulse-bright 0.22s ease-out;
+  }
+}
+
+@keyframes lotor-sky-pulse-bright {
+  0%,
+  100% {
+    filter: brightness(1.48) contrast(1.08) saturate(1.08);
+  }
+  50% {
+    filter: brightness(1.78) contrast(1.1) saturate(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.lotor-home .lotor-scene {
+    transition: none;
+  }
+  html.lotor-home.lotor-sky-ready .fixed-celestial > .celestial-mover {
+    transition: none;
+  }
+}
+
+html.lotor-home .site-main--stage {
+  position: relative;
+  z-index: 1;
+  display: block;
+  padding-top: 0;
+  padding-bottom: 0;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+/* Scroll + snap live here only — height matches visible stage below header */
+html.lotor-home .home-scrollport {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--lotor-header-h);
+  bottom: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  outline: none;
+}
+
+html.lotor-home .home-scrollport .site-footer--home-end {
+  scroll-snap-align: none;
+  scroll-snap-stop: normal;
+  flex-shrink: 0;
+}
+
+html.lotor-home .lotor-scene {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  /* Exactly one scrollport viewport per section (parent .home-scrollport has definite height) */
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  padding-left: var(--pad-x);
+  padding-right: var(--pad-x);
+  padding-top: 0;
+  padding-bottom: var(--lotor-scene-pad-bottom);
+  opacity: 1;
+  visibility: visible;
+  /* Pass taps/wheel through to #home-scrollport; interactive copy lives in SVG foreignObject */
+  pointer-events: none;
+  overflow: hidden;
+}
+
+html.lotor-home .lotor-scene.is-active {
+  z-index: 1;
+}
+
+/* Section element carries .lotor-scene.panel — same node, not a child */
+html.lotor-home .lotor-scene.panel {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: clamp(0.35rem, 1.2vmin, 0.75rem) 0;
+  background: transparent;
+}
+
+html.lotor-home .lotor-scene .panel__inner--deck,
+html.lotor-home .lotor-scene .panel__inner--hero.panel__inner--deck {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden;
+  padding-block: clamp(0.25rem, 1vmin, 0.65rem) !important;
+}
+
+html.lotor-home .lotor-scene.panel--hero {
+  min-height: 0;
+  justify-content: flex-start;
+}
+
+html.lotor-home .lotor-scene.panel--hero .panel__inner--hero {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+html.lotor-home .lotor-scene .deck-header-aside {
+  flex-shrink: 0;
+  margin-bottom: 0.25rem;
+  gap: 0.35rem 1rem;
+  align-items: baseline;
+}
+
+html.lotor-home .lotor-scene .deck-header-aside h2 {
+  font-size: clamp(1.35rem, 3.2vw, 2rem);
+  margin-bottom: 0.25rem;
+}
+
+html.lotor-home .lotor-scene .const-panel__figcap {
+  flex-shrink: 0;
+  margin-bottom: 0.15rem;
+  font-size: 0.58rem;
+}
+
+html.lotor-home .lotor-scene .const-section__lede,
+html.lotor-home .lotor-scene .deck-header-aside__lede {
+  font-size: clamp(0.82rem, 1.4vw, 0.98rem);
+  line-height: 1.4;
+  margin-bottom: 0.35rem !important;
+}
+
+html.lotor-home .lotor-scene .const-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  max-width: var(--max);
+  margin-left: auto;
+  margin-right: auto;
+  max-height: none;
+  margin-top: 0;
+}
+
+html.lotor-home .lotor-scene .const-panel[data-constellation="capabilities"],
+html.lotor-home .lotor-scene .const-panel[data-constellation="quals"],
+html.lotor-home .lotor-scene .const-panel[data-constellation="contact"] {
+  min-height: 0;
+}
+
+/* Deck + cards: copy lives in flow; constellation is only on the shared sky layer */
+html.lotor-home .const-panel--deck {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  overflow: visible !important;
+  min-height: 0 !important;
+}
+
+html.lotor-home .const-deck__grid {
+  display: grid;
+  gap: 0.55rem 0.85rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  html.lotor-home .const-deck__grid:not(.const-deck__grid--quals):not(.const-deck__grid--contact) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  html.lotor-home .const-deck__grid--quals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+html.lotor-home .const-deck__grid--contact {
+  max-width: 44rem;
+  margin-inline: auto;
+}
+
+html.lotor-home .home-fo[data-fo-scene="contact"] .contact-fo__head {
+  text-align: center;
+  max-width: 32rem;
+  margin-inline: auto;
+}
+
+html.lotor-home .home-fo[data-fo-scene="contact"] .contact-fo__lede {
+  margin-bottom: 0.35rem;
+  text-wrap: wrap;
+  text-rendering: geometricPrecision;
+}
+
+html.lotor-home .const-deck__grid--contact.contact-team {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(1rem, 3vw, 1.35rem);
+}
+
+@media (min-width: 640px) {
+  html.lotor-home .const-deck__grid--contact.contact-team {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+}
+
+html.lotor-home .contact-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 100%;
+  padding: clamp(1rem, 2.2vw, 1.35rem) clamp(1.05rem, 2.4vw, 1.45rem);
+  text-align: left;
+}
+
+html.lotor-home .contact-card__name {
+  margin: 0 0 0.35rem;
+  font-size: clamp(0.72rem, 1.05vw, 0.82rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(250, 246, 238, 0.98);
+  line-height: 1.25;
+}
+
+html.lotor-home .contact-card__role {
+  margin: 0 0 0.5rem;
+  font-size: clamp(0.88rem, 1.25vw, 1.02rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--gold-bright);
+  line-height: 1.3;
+}
+
+html.lotor-home .contact-card__prior {
+  margin: 0 0 1rem;
+  flex: 1 1 auto;
+  font-size: clamp(0.76rem, 1.05vw, 0.88rem);
+  line-height: 1.5;
+  color: rgba(218, 212, 200, 0.88);
+}
+
+html.lotor-home .contact-card__email {
+  margin-top: auto;
+  align-self: stretch;
+  text-align: center;
+}
+
+html.lotor-home .const-deck__card {
+  box-sizing: border-box;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(7, 9, 16, 0.88);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.22s ease, background 0.22s ease;
+}
+
+html.lotor-home a.const-deck__card:hover,
+html.lotor-home a.const-deck__card:focus-visible {
+  border-color: rgba(var(--gold-rgb), 0.42);
+  background: rgba(10, 12, 20, 0.94);
+  outline: none;
+}
+
+html.lotor-home .const-deck__card--compact {
+  padding: 0.5rem 0.75rem;
+}
+
+html.lotor-home .const-deck__title {
+  font-size: clamp(0.82rem, 1.15vw, 0.98rem);
+  font-weight: 600;
+  color: var(--gold-bright);
+  margin: 0 0 0.4rem;
+  line-height: 1.28;
+}
+
+html.lotor-home .const-deck__card--compact .const-deck__title {
+  margin: 0;
+  font-size: clamp(0.76rem, 1.05vw, 0.9rem);
+}
+
+html.lotor-home .const-deck__body {
+  font-size: clamp(0.74rem, 1vw, 0.88rem);
+  line-height: 1.45;
+  margin: 0;
+  color: rgba(221, 214, 204, 0.9);
+}
+
+html.lotor-home .const-deck__body--rich .btn-email {
+  margin-bottom: 0.35rem;
+}
+
+html.lotor-home .const-deck__more {
+  display: inline-block;
+  margin-top: 0.45rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(var(--gold-bright-rgb), 0.78);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card {
+    opacity: 0;
+    animation: lotor-deck-card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(1) {
+    animation-delay: 0.03s;
+  }
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(2) {
+    animation-delay: 0.07s;
+  }
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(3) {
+    animation-delay: 0.11s;
+  }
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(4) {
+    animation-delay: 0.15s;
+  }
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(5) {
+    animation-delay: 0.19s;
+  }
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(6) {
+    animation-delay: 0.23s;
+  }
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(7) {
+    animation-delay: 0.27s;
+  }
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(8) {
+    animation-delay: 0.31s;
+  }
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(9) {
+    animation-delay: 0.35s;
+  }
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card:nth-child(n + 10) {
+    animation-delay: 0.4s;
+  }
+}
+
+@keyframes lotor-deck-card-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.lotor-home .lotor-scene--entered .const-deck__grid .const-deck__card {
+    opacity: 1;
+  }
+
+  html.lotor-home .home-map-const-labels .home-map-const-label {
+    opacity: 1;
+  }
+}
+
+/*
+ * Map callouts: no entrance animation — tying opacity 0 + keyframes to data-home-scene re-ran the fade on every
+ * scroll-spy flip or attribute churn, so labels flashed. Keep opacity stable when the scene is active.
+ * Contact deck cards still use lotor-deck-card-in below.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html.lotor-home[data-home-scene="capabilities"] .home-map-const-labels[data-fo-labels="capabilities"] .home-map-const-label,
+  html.lotor-home[data-home-scene="quals"] .home-map-const-labels[data-fo-labels="quals"] .home-map-const-label {
+    opacity: 1;
+  }
+
+  html.lotor-home[data-home-scene="contact"] .home-fo[data-fo-scene="contact"] .const-deck__grid .const-deck__card {
+    opacity: 0;
+    animation: lotor-deck-card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  html.lotor-home[data-home-scene="contact"] .home-fo[data-fo-scene="contact"] .const-deck__grid .const-deck__card:nth-child(1) {
+    animation-delay: 0.05s;
+  }
+  html.lotor-home[data-home-scene="contact"] .home-fo[data-fo-scene="contact"] .const-deck__grid .const-deck__card:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.lotor-home .home-fo .const-deck__grid .const-deck__card {
+    opacity: 1;
+  }
+}
+
+html.lotor-home .site-footer {
+  position: relative;
+  z-index: 2;
+  padding: 1rem var(--pad-x) 1.25rem;
+}
+
+html.lotor-home .site-footer--home-end {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, transparent 0%, rgba(10, 12, 18, 0.55) 100%);
+}
+
+html.lotor-home .site-footer .footer-inner {
+  font-size: 0.78rem;
+}
+
+/* Constellation path connector behind rail dots */
+html.lotor-home .scroll-rail__list {
+  position: relative;
+  padding-right: 0.2rem;
+}
+
+html.lotor-home .scroll-rail__list::before {
+  content: "";
+  position: absolute;
+  right: 0.2rem;
+  top: 0.7rem;
+  bottom: 0.7rem;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(var(--gold-rgb), 0.22) 12%,
+    rgba(var(--gold-rgb), 0.38) 50%,
+    rgba(var(--gold-rgb), 0.22) 88%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-radius: 1px;
+}
+
+html.lotor-home .scroll-rail__link .scroll-rail__label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 0.1rem;
+}
+
+html.lotor-home .scroll-rail__link .scroll-rail__const {
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  color: rgba(221, 214, 204, 0.45);
+  line-height: 1.2;
+}
+
+@media (min-width: 1200px) {
+  html.lotor-home .scroll-rail__link:hover .scroll-rail__label,
+  html.lotor-home .scroll-rail__link:focus-visible .scroll-rail__label,
+  html.lotor-home .scroll-rail__link.is-active .scroll-rail__label {
+    max-width: 11rem;
+  }
+}
+
+/* Full-screen detail overlay */
+.lotor-detail {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  width: 100vw;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--void);
+  color: var(--text);
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.lotor-detail::backdrop {
+  background: rgba(5, 6, 12, 0.72);
+}
+
+.lotor-detail[open] {
+  display: flex;
+}
+
+.lotor-detail__chrome {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem var(--pad-x);
+  padding-top: max(0.65rem, env(safe-area-inset-top));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(10, 8, 18, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.lotor-detail__back {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--link);
+  background: transparent;
+  border: 1px solid rgba(var(--gold-rgb), 0.35);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+}
+
+.lotor-detail__back:hover,
+.lotor-detail__back:focus-visible {
+  color: var(--link-hover);
+  border-color: rgba(var(--gold-bright-rgb), 0.5);
+  outline: none;
+}
+
+.lotor-detail__title {
+  flex: 1;
+  margin: 0;
+  font-size: clamp(1rem, 2.2vw, 1.25rem);
+  color: var(--frost);
+  font-weight: 600;
+}
+
+.lotor-detail__loading {
+  padding: 2rem var(--pad-x);
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+.lotor-detail__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem var(--pad-x) 2rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lotor-detail__body .panel__inner--deck {
+  max-width: min(1280px, var(--max));
+  margin: 0 auto;
+}
+
+@supports (view-transition-name: none) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lotor-detail {
+      view-transition-name: lotor-detail-layer;
+    }
+
+    ::view-transition-old(lotor-detail-layer),
+    ::view-transition-new(lotor-detail-layer) {
+      animation-duration: 0.38s;
+      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+}
+
+/* Scroll-linked section entrance (skipped on home — sky zoom + crossfade instead) */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    html:not(.sky-journey) .panel[data-scroll-section] > .panel__inner {
+      animation: lotor-scroll-reveal 1.05s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-timeline: view(block);
+      animation-range: entry -10% entry 48%;
+    }
+  }
+}
+
+@keyframes lotor-scroll-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fallback: fade/slide when scroll-driven animations are unavailable */
+@supports not (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    html:not(.sky-journey) .panel[data-scroll-section] > .panel__inner.lotor-enter {
+      animation: lotor-scroll-reveal 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+}
+
+/* Start title lives in sky foreignObject (#intro section is scroll sentinel only) */
+#intro-heading.hero-site-title {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .hero-cta {
+    justify-content: center;
+  }
+}
+
+.lede {
+  font-size: 1.14rem;
+  line-height: 1.72;
+  color: var(--text);
+  max-width: 42rem;
+  margin-bottom: 2.15rem;
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+.lede--narrow {
+  max-width: 36rem;
+}
+
+.hello-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.btn-email {
+  font-size: 0.88rem;
+  word-break: break-all;
+}
+
+@media (min-width: 520px) {
+  .btn-email {
+    font-size: 0.92rem;
+    word-break: normal;
+  }
+}
+
+/* Buttons — flat */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.72rem 1.45rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-style: solid;
+  border-width: 1px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+}
+
+.btn-primary {
+  color: var(--void);
+  border-color: var(--gold-deep);
+  background: var(--gold);
+  box-shadow: none;
+}
+
+.btn-primary:hover {
+  color: var(--void);
+  border-color: var(--gold);
+  background: var(--gold-bright);
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  background: var(--gold-deep);
+  border-color: var(--gold-deep);
+  box-shadow: none;
+}
+
+.btn-ghost {
+  color: var(--frost);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(6px) saturate(1.02);
+  box-shadow: none;
+}
+
+.btn-ghost:hover {
+  border-color: var(--glass-border-hover);
+  color: var(--gold-bright);
+  background: rgba(255, 255, 255, 0.07);
+  transform: none;
+}
+
+.btn-ghost:active {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@supports not (backdrop-filter: blur(6px)) {
+  .btn-ghost {
+    background: rgba(18, 22, 34, 0.65);
+  }
+}
+
+/* Footer */
+.site-footer {
+  position: relative;
+  z-index: 1;
+  padding: 1.75rem var(--pad-x);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, rgba(7, 9, 16, 0.42) 0%, rgba(10, 8, 18, 0.75) 100%);
+  backdrop-filter: blur(10px) saturate(1.02);
+}
+
+@supports not (backdrop-filter: blur(10px)) {
+  .site-footer {
+    background: linear-gradient(180deg, rgba(7, 9, 16, 0.88) 0%, var(--void) 100%);
+  }
+}
+
+.footer-inner {
+  max-width: var(--max);
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.footer-brand {
+  color: var(--brand-wordmark);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  text-decoration: none;
+}
+
+.footer-brand:hover {
+  color: var(--gold-bright);
+}
+
+.footer-copy {
+  margin: 0;
+}
+
+@media print {
+  .fixed-celestial,
+  .home-map-overlay,
+  .site-header {
+    display: none !important;
+  }
+  body {
+    background: white;
+    color: black;
+  }
+}

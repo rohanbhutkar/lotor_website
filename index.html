@@ -1,12 +1,481 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lotor-home" data-home-scene="intro">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Lotor</title>
+    <title>lotor lab — Innovating on R&amp;D through Adaptable Evidence Generation</title>
+    <meta
+      name="description"
+      content="First-in-class therapies, no borrowed map—clinical and real-world evidence strategy from lotor lab."
+    />
+    <meta property="og:title" content="lotor lab — Innovating on R&amp;D through Adaptable Evidence Generation" />
+    <meta
+      property="og:description"
+      content="Resourceful evidence generation for programs where precedent does not exist."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="lotor lab" />
+    <meta name="twitter:description" content="Evidence strategy from regulatory through access." />
+    <link rel="icon" href="favicon.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="preload" href="sky-manifest.json" as="fetch" crossorigin="anonymous" />
+    <link rel="stylesheet" href="styles.css?v=cap-read-1" />
   </head>
   <body>
-    <h1>Lotor</h1>
-    <p>Replace this page with your site.</p>
+    <!-- Full-viewport sky + scroll-parallax: one map space with #home-scrollport (rebuild: python3 assets/build_hip_layer.py) -->
+    <div class="fixed-celestial" id="fixed-celestial" data-sky-map-w="1489" data-sky-map-h="1190">
+      <div class="celestial-mover">
+        <div class="celestial-parallax">
+          <!-- One SVG: Hipparcos chart + stick figures share map space (zoom/pan stay aligned; Prezi-style via .celestial-mover) -->
+          <svg
+            class="celestial-svg home-map-overlay sky-unified"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="-391.22 -41.67 1489 1190"
+            preserveAspectRatio="none"
+            width="1489"
+            height="1190"
+            role="group"
+            aria-label="Sky map and section content"
+          >
+            <!-- Must match assets/hipparcos_celestial.svg root viewBox + sky-manifest.json -->
+            <image
+              href="assets/hipparcos_celestial.svg"
+              x="-391.22"
+              y="-41.67"
+              width="1489"
+              height="1190"
+              preserveAspectRatio="none"
+            />
+            <g class="home-sky-scene" data-scene="intro">
+              <!-- Wider than before so intro columns are not clipped at the SVG foreignObject edge -->
+              <foreignObject x="-218" y="-18.8" width="1240" height="1123" overflow="visible">
+                <div xmlns="http://www.w3.org/1999/xhtml" class="home-fo home-fo--intro" data-fo-scene="intro">
+                  <div class="home-fo__panel home-fo__panel--hero">
+                    <div class="intro-hero">
+                      <header class="intro-hero__brand">
+                        <h1 id="intro-heading" class="hero-site-title"><span class="brand-mark">lotor lab</span></h1>
+                        <p class="hero-subtitle">
+                          Innovating on R&amp;D<br class="hero-subtitle__break" aria-hidden="true" />
+                          <span class="hero-subtitle__rest">through Adaptable Evidence Generation</span>
+                        </p>
+                      </header>
+                      <div class="intro-hero__vista" aria-hidden="true"></div>
+                      <aside class="intro-hero__story" aria-label="About lotor lab">
+                        <p>
+                          Inspired by the clever <i lang="la">Procyon lotor</i>, we built
+                          <span class="brand-mark">lotor lab</span>—serving our clients with the
+                          same resiliency and adaptability.
+                        </p>
+                        <p>
+                          We excel in supporting first-in-class therapies where no clear precedent exists, applying resourceful,
+                          original thinking to identify the right clinical and real-world evidence that maximizes probability of
+                          success.
+                        </p>
+                        <p class="intro-hero__closing">
+                          Regulatory approval is rarely driven by a single point, but rather by a carefully assembled constellation
+                          of evidence.
+                        </p>
+                      </aside>
+                    </div>
+                    <nav class="hero-cta hero-cta--below-start" aria-label="Start">
+                      <a class="btn btn-ghost" href="#capabilities">Capabilities</a>
+                      <a class="btn btn-ghost" href="#quals">Qualifications</a>
+                      <a class="btn btn-ghost" href="#contact">Get in touch</a>
+                    </nav>
+                  </div>
+                </div>
+              </foreignObject>
+            </g>
+            <g class="home-sky-scene" data-scene="capabilities" fill="none" style="display: none">
+              <!-- Leader x1/y1 = viewBox space after hipparcos-map-scale (same as rendered <image>); inner HIP translates in hipparcos_celestial.svg -->
+              <g class="home-cap-leaders" fill="none" pointer-events="none" aria-hidden="true">
+                <!-- x2/y2 updated in main.js syncHomeMapLeaderLines -->
+                <line data-leader-anchor="const-cap-foundation" x1="169.9" y1="706.12" x2="147.3" y2="644.2" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-cap-lifecycle" x1="263.67" y1="525.48" x2="369.4" y2="354.3" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-cap-access" x1="210.21" y1="614.66" x2="173.4" y2="521.1" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-cap-ai" x1="194.35" y1="537.72" x2="161.3" y2="420.6" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+              </g>
+              <foreignObject x="-391.22" y="-41.67" width="1489" height="1190" overflow="visible">
+                <div xmlns="http://www.w3.org/1999/xhtml" class="home-map-label-layer home-map-label-layer--pad-cap">
+                  <div
+                    class="const-labels home-map-const-labels"
+                    data-fo-labels="capabilities"
+                    role="region"
+                    aria-label="Capability stars on the map"
+                  >
+                    <!-- % positions + L/R class: applyCentroidMapLabelBases("capabilities") in main.js -->
+                    <a
+                      id="const-cap-foundation"
+                      class="const-label const-label--left const-label--link home-map-const-label"
+                      style="left: 22%; top: 50%"
+                      href="capabilities/payer-hta-strategy.html"
+                    >
+                      <h3 class="const-label__title">Translate for access</h3>
+                      <p class="const-label__body">RWE and value stories aligned with payer priorities.</p>
+                      <span class="const-label__more">Open capability page</span>
+                    </a>
+                    <a
+                      id="const-cap-lifecycle"
+                      class="const-label const-label--right const-label--link home-map-const-label"
+                      style="left: 65%; top: 50%"
+                      href="capabilities/post-launch-execution.html"
+                    >
+                      <h3 class="const-label__title">Drive lifecycle value</h3>
+                      <p class="const-label__body">Ongoing evidence and stakeholder engagement through the lifecycle.</p>
+                      <span class="const-label__more">Open capability page</span>
+                    </a>
+                    <a
+                      id="const-cap-access"
+                      class="const-label const-label--right const-label--link home-map-const-label"
+                      style="left: 72%; top: 50%"
+                      href="capabilities/clinical-program-design.html"
+                    >
+                      <h3 class="const-label__title">Architecting the foundation</h3>
+                      <p class="const-label__body">Core clinical and regulatory strategy—protocol optimization, endpoints, SoA.</p>
+                      <span class="const-label__more">Open capability page</span>
+                    </a>
+                    <a
+                      id="const-cap-ai"
+                      class="const-label const-label--left const-label--link home-map-const-label"
+                      style="left: 22%; top: 50%"
+                      href="capabilities/ai-ml-for-evidence.html"
+                    >
+                      <h3 class="const-label__title">Enabling advanced AI / ML</h3>
+                      <p class="const-label__body">Enterprise agentic workflows for evidence—not demos.</p>
+                      <span class="const-label__more">Open capability page</span>
+                    </a>
+                  </div>
+                </div>
+              </foreignObject>
+            </g>
+            <g class="home-sky-scene" data-scene="quals" fill="none" style="display: none">
+              <!-- CMa leaders: x1/y1 in viewBox space after hipparcos-map-scale (HIP 30324,32349,31592,33579,34444,33856) -->
+              <g class="home-quals-leaders" fill="none" pointer-events="none" aria-hidden="true">
+                <!-- focal cy = mean of these 9 (x1,y1), not of 6 unique stars; x2/y2 from syncHomeMapLeaderLines -->
+                <line data-leader-anchor="const-quals-q1" x1="327.2" y1="819.21" x2="153.9" y2="401.7" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-quals-q2" x1="379.01" y1="804.67" x2="570.2" y2="398.7" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-quals-q3" x1="359.47" y1="834.21" x2="160.7" y2="463.2" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-quals-q4" x1="379.01" y1="804.67" x2="561.4" y2="480.3" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-quals-q5" x1="327.2" y1="819.21" x2="145.1" y2="530.0" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-quals-q6" x1="432.64" y1="916.67" x2="563.8" y2="585.4" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-quals-q7" x1="410.11" y1="946.51" x2="171.3" y2="638.3" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-quals-q8" x1="417.25" y1="934.51" x2="164.0" y2="717.5" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+                <line data-leader-anchor="const-quals-q9" x1="432.64" y1="916.67" x2="572.7" y2="725.4" stroke="rgba(198, 210, 235, 0.52)" stroke-width="1.2" stroke-linecap="round" />
+              </g>
+              <foreignObject x="-391.22" y="-41.67" width="1489" height="1190" overflow="visible">
+                <div xmlns="http://www.w3.org/1999/xhtml" class="home-map-label-layer home-map-label-layer--pad-quals">
+                  <div
+                    class="const-labels home-map-const-labels"
+                    data-fo-labels="quals"
+                    role="region"
+                    aria-label="Qualification stars on the map"
+                  >
+                    <!-- 4 west / 5 east by star sort; west group uses mid-west % (not gutter) — main.js -->
+                    <a
+                      id="const-quals-q1"
+                      class="const-label const-label--left const-label--link home-map-const-label"
+                      style="left: 30%; top: 50%"
+                      href="quals/de-novo-first-in-class-pdt.html"
+                    >
+                      <h3 class="const-label__title">De Novo · first-in-class PDT</h3>
+                      <p class="const-label__body">Pathway, evidence package, and investor-ready narrative.</p>
+                      <span class="const-label__more">Open story</span>
+                    </a>
+                    <a
+                      id="const-quals-q2"
+                      class="const-label const-label--left const-label--link home-map-const-label"
+                      style="left: 30%; top: 50%"
+                      href="quals/trial-to-payer-value.html"
+                    >
+                      <h3 class="const-label__title">Trial → payer value</h3>
+                      <p class="const-label__body">Unified value story and payer-facing synthesis.</p>
+                      <span class="const-label__more">Open story</span>
+                    </a>
+                    <a
+                      id="const-quals-q3"
+                      class="const-label const-label--left const-label--link home-map-const-label"
+                      style="left: 30%; top: 50%"
+                      href="quals/rare-disease-pre-launch.html"
+                    >
+                      <h3 class="const-label__title">Rare disease · pre-launch MA / RWE</h3>
+                      <p class="const-label__body">Burden, KOLs, and pre-launch medical affairs.</p>
+                      <span class="const-label__more">Open story</span>
+                    </a>
+                    <a
+                      id="const-quals-q4"
+                      class="const-label const-label--right const-label--link home-map-const-label"
+                      style="left: 70%; top: 50%"
+                      href="quals/rare-disease-post-launch.html"
+                    >
+                      <h3 class="const-label__title">Rare disease · post-launch RWE</h3>
+                      <p class="const-label__body">Specialty channels, claims, and MA evidence.</p>
+                      <span class="const-label__more">Open story</span>
+                    </a>
+                    <a
+                      id="const-quals-q5"
+                      class="const-label const-label--left const-label--link home-map-const-label"
+                      style="left: 30%; top: 50%"
+                      href="quals/bd-diligence.html"
+                    >
+                      <h3 class="const-label__title">BD · asset &amp; clinical diligence</h3>
+                      <p class="const-label__body">End-to-end asset view and executive go / no-go.</p>
+                      <span class="const-label__more">Open story</span>
+                    </a>
+                    <a
+                      id="const-quals-q6"
+                      class="const-label const-label--right const-label--link home-map-const-label"
+                      style="left: 70%; top: 50%"
+                      href="quals/combination-therapy-evidence-lead.html"
+                    >
+                      <h3 class="const-label__title">Combination therapy · evidence lead</h3>
+                      <p class="const-label__body">Evidence strategy across combination development.</p>
+                      <span class="const-label__more">Open story</span>
+                    </a>
+                    <a
+                      id="const-quals-q7"
+                      class="const-label const-label--left const-label--link home-map-const-label"
+                      style="left: 30%; top: 50%"
+                      href="quals/immunology-pricing-market-access.html"
+                    >
+                      <h3 class="const-label__title">Immunology · pricing &amp; access</h3>
+                      <p class="const-label__body">Pricing, access, and immunology market evidence.</p>
+                      <span class="const-label__more">Open story</span>
+                    </a>
+                    <a
+                      id="const-quals-q8"
+                      class="const-label const-label--right const-label--link home-map-const-label"
+                      style="left: 70%; top: 50%"
+                      href="quals/gene-therapy-first-in-human.html"
+                    >
+                      <h3 class="const-label__title">Gene therapy · first-in-human program</h3>
+                      <p class="const-label__body">FIH design, endpoints, and regulatory path.</p>
+                      <span class="const-label__more">Open story</span>
+                    </a>
+                    <a
+                      id="const-quals-q9"
+                      class="const-label const-label--right const-label--link home-map-const-label"
+                      style="left: 70%; top: 50%"
+                      href="quals/gene-therapy-pediatric-expansion.html"
+                    >
+                      <h3 class="const-label__title">Gene therapy · pediatric expansion</h3>
+                      <p class="const-label__body">Pediatric evidence and expansion strategy.</p>
+                      <span class="const-label__more">Open story</span>
+                    </a>
+                  </div>
+                </div>
+              </foreignObject>
+            </g>
+            <g class="home-sky-scene" data-scene="contact" fill="none" style="display: none">
+              <foreignObject x="498.2" y="459.3" width="472.5" height="630.7" overflow="visible">
+                <div xmlns="http://www.w3.org/1999/xhtml" class="home-fo" data-fo-scene="contact">
+                  <div class="home-fo__panel home-fo__panel--contact">
+                    <div class="deck-header-aside home-fo__deck-head contact-fo__head">
+                      <div>
+                        <h2 id="contact-heading">Contact</h2>
+                      </div>
+                      <p class="lede const-section__lede deck-header-aside__lede contact-fo__lede">
+                        Reach the founders directly—we read everything.
+                      </p>
+                    </div>
+                    <div class="const-deck contact-fo__deck">
+                      <div class="const-deck__grid const-deck__grid--contact contact-team" role="list">
+                        <article class="const-deck__card contact-card" id="const-contact-email1" role="listitem">
+                          <h3 class="contact-card__name">Michelle Guo</h3>
+                          <p class="contact-card__role">Co-Founder &amp; CEO</p>
+                          <p class="contact-card__prior">Previously Clinical R&amp;D Portfolio Leader at Deloitte</p>
+                          <a class="btn btn-ghost btn-email contact-card__email" href="mailto:michelle@lotorlab.com"
+                            >michelle@lotorlab.com</a
+                          >
+                        </article>
+                        <article class="const-deck__card contact-card" id="const-contact-email2" role="listitem">
+                          <h3 class="contact-card__name">Rohan Bhutkar</h3>
+                          <p class="contact-card__role">Co-Founder &amp; CTO</p>
+                          <p class="contact-card__prior">Previously Lead Engineer in Clinical R&amp;D at Deloitte</p>
+                          <a class="btn btn-ghost btn-email contact-card__email" href="mailto:rohan@lotorlab.com"
+                            >rohan@lotorlab.com</a
+                          >
+                        </article>
+                      </div>
+                    </div>
+                    <footer class="home-fo__footer">
+                      <div class="footer-inner">
+                        <a class="footer-brand brand-mark" href="#intro">lotor lab</a>
+                        <span class="footer-copy">&copy; <span id="y"></span></span>
+                      </div>
+                    </footer>
+                  </div>
+                </div>
+              </foreignObject>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <!-- First-paint sky size only; main.js applySky() owns --sky-cover / pan / zoom after load. -->
+    <script>
+      (function () {
+        var fc = document.getElementById("fixed-celestial");
+        if (!fc || !fc.querySelector(".celestial-mover")) return;
+        var w = parseFloat(fc.getAttribute("data-sky-map-w")) || 1489;
+        var h = parseFloat(fc.getAttribute("data-sky-map-h")) || 1190;
+        fc.style.setProperty("--sky-map-w", w + "px");
+        fc.style.setProperty("--sky-map-h", h + "px");
+        var vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+        var vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+        document.documentElement.style.setProperty("--sky-layout-w", vw + "px");
+        document.documentElement.style.setProperty("--sky-layout-h", vh + "px");
+        fc.style.setProperty("--sky-cover", String(Math.max(vw / w, vh / h)));
+      })();
+    </script>
+    <div class="ambient-layer" aria-hidden="true"></div>
+    <div class="scroll-progress" aria-hidden="true"><span class="scroll-progress__fill"></span></div>
+    <a class="skip-link" href="#home-scrollport">Skip to main content</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="nav-brand" href="#intro">
+          <img
+            class="nav-brand__mark"
+            src="assets/inspiration/logo-raccoon.png"
+            width="40"
+            height="40"
+            alt=""
+            decoding="async"
+          />
+          <span class="nav-brand__text brand-mark">lotor lab</span>
+        </a>
+        <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+        <nav id="site-nav" aria-label="Primary">
+          <ul class="nav-links">
+            <li><a href="#intro">Start</a></li>
+            <li><a href="#capabilities">Capabilities</a></li>
+            <li><a href="#quals">Qualifications</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <div id="home-capabilities-strip" class="home-capabilities-strip" hidden aria-hidden="true">
+      <h2 id="capabilities-heading" class="home-capabilities-strip__title">Capabilities</h2>
+    </div>
+    <div id="home-quals-strip" class="home-quals-strip" hidden aria-hidden="true">
+      <h2 id="quals-heading" class="home-quals-strip__title">Qualifications</h2>
+    </div>
+
+    <nav class="scroll-rail" aria-label="On this page">
+      <ol class="scroll-rail__list">
+        <li>
+          <a
+            class="scroll-rail__link"
+            href="#intro"
+            data-scene-target="intro"
+            data-constellation-name="Chart"
+            aria-label="Start"
+          >
+            <span class="scroll-rail__dot"></span>
+            <span class="scroll-rail__label"><span class="scroll-rail__const">Chart</span></span>
+          </a>
+        </li>
+        <li>
+          <a
+            class="scroll-rail__link"
+            href="#capabilities"
+            data-scene-target="capabilities"
+            data-constellation-name="Orion"
+            aria-label="Capabilities"
+          >
+            <span class="scroll-rail__dot"></span>
+            <span class="scroll-rail__label"><span class="scroll-rail__const">Orion</span></span>
+          </a>
+        </li>
+        <li>
+          <a
+            class="scroll-rail__link"
+            href="#quals"
+            data-scene-target="quals"
+            data-constellation-name="Canis Major"
+            aria-label="Qualifications"
+          >
+            <span class="scroll-rail__dot"></span>
+            <span class="scroll-rail__label"><span class="scroll-rail__const">Canis Major</span></span>
+          </a>
+        </li>
+        <li>
+          <a
+            class="scroll-rail__link"
+            href="#contact"
+            data-scene-target="contact"
+            data-constellation-name="Canis Minor"
+            aria-label="Contact"
+          >
+            <span class="scroll-rail__dot"></span>
+            <span class="scroll-rail__label"><span class="scroll-rail__const">Canis Minor</span></span>
+          </a>
+        </li>
+      </ol>
+    </nav>
+
+    <main
+      id="main"
+      class="site-main site-main--stage"
+      data-active-scene="intro"
+      tabindex="-1"
+      aria-describedby="home-journey-hint"
+    >
+      <p id="home-journey-hint" class="visually-hidden">
+        Scroll to move between sections. When not typing in a field, use arrow keys or Page Up and Page Down to jump between
+        main sections.
+      </p>
+      <div
+        id="home-scrollport"
+        class="home-scrollport"
+        tabindex="-1"
+        role="region"
+        aria-label="Home sections"
+        aria-describedby="home-journey-hint"
+      >
+      <section
+        id="intro"
+        class="lotor-scene panel const-section panel--hero is-active"
+        data-scene="intro"
+        aria-label="Start"
+      >
+        <div class="home-scroll-sentinel" aria-hidden="true"></div>
+      </section>
+      <section
+        id="capabilities"
+        class="lotor-scene panel const-section panel--alt"
+        data-scene="capabilities"
+        aria-label="Capabilities"
+      >
+        <div class="home-scroll-sentinel" aria-hidden="true"></div>
+      </section>
+      <section id="quals" class="lotor-scene panel const-section" data-scene="quals" aria-label="Qualifications">
+        <div class="home-scroll-sentinel" aria-hidden="true"></div>
+      </section>
+      <section
+        id="contact"
+        class="lotor-scene panel const-section panel--cta"
+        data-scene="contact"
+        aria-label="Contact"
+      >
+        <div class="home-scroll-sentinel" aria-hidden="true"></div>
+      </section>
+      </div>
+    </main>
+
+    <dialog id="lotor-detail" class="lotor-detail" aria-labelledby="lotor-detail-title">
+      <div class="lotor-detail__chrome">
+        <button type="button" class="lotor-detail__back" aria-label="Back to constellation">Back</button>
+        <h2 id="lotor-detail-title" class="lotor-detail__title"></h2>
+      </div>
+      <div class="lotor-detail__loading" aria-live="polite" aria-busy="true" hidden>Loading…</div>
+      <div class="lotor-detail__body"></div>
+    </dialog>
+
+    <script src="main.js?v=qual-cap-top-right-1" defer></script>
   </body>
 </html>

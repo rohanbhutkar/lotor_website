@@ -1,0 +1,80 @@
+{
+  "viewBox": {
+    "x": -391.22222222222223,
+    "y": -41.666666666666686,
+    "w": 1489,
+    "h": 1190
+  },
+  "mapScale": {
+    "cx": 353.28,
+    "cy": 553.33,
+    "s": 1.24
+  },
+  "detailFocals": {
+    "capabilities/payer-hta-strategy.html": {
+      "nx": 0.42254,
+      "ny": 0.541556,
+      "zoom": 2.18
+    },
+    "capabilities/post-launch-execution.html": {
+      "nx": 0.413934,
+      "ny": 0.489409,
+      "zoom": 2.18
+    },
+    "capabilities/clinical-program-design.html": {
+      "nx": 0.400706,
+      "ny": 0.603497,
+      "zoom": 2.2
+    },
+    "capabilities/ai-ml-for-evidence.html": {
+      "nx": 0.451441,
+      "ny": 0.481115,
+      "zoom": 2.15
+    },
+    "quals/de-novo-first-in-class-pdt.html": {
+      "nx": 0.562605,
+      "ny": 0.769115,
+      "zoom": 2.28
+    },
+    "quals/trial-to-payer-value.html": {
+      "nx": 0.536241,
+      "ny": 0.726144,
+      "zoom": 2.22
+    },
+    "quals/rare-disease-pre-launch.html": {
+      "nx": 0.513954,
+      "ny": 0.670291,
+      "zoom": 2.2
+    },
+    "quals/rare-disease-post-launch.html": {
+      "nx": 0.527634,
+      "ny": 0.672938,
+      "zoom": 2.2
+    },
+    "quals/bd-diligence.html": {
+      "nx": 0.537147,
+      "ny": 0.661821,
+      "zoom": 2.12
+    },
+    "quals/combination-therapy-evidence-lead.html": {
+      "nx": 0.482969,
+      "ny": 0.775027,
+      "zoom": 2.25
+    },
+    "quals/immunology-pricing-market-access.html": {
+      "nx": 0.525278,
+      "ny": 0.72685,
+      "zoom": 2.22
+    },
+    "quals/gene-therapy-first-in-human.html": {
+      "nx": 0.503354,
+      "ny": 0.690232,
+      "zoom": 2.2
+    },
+    "quals/gene-therapy-pediatric-expansion.html": {
+      "nx": 0.485868,
+      "ny": 0.680085,
+      "zoom": 2.18
+    }
+  }
+}
