@@ -230,11 +230,104 @@
     return Math.round(x * 10000) / 10000;
   }
 
+  var ACCESS_STORAGE_KEY = "lotor-access-granted";
+  var ACCESS_CODE = "yungbae";
+
+  function readStoredAccessGranted() {
+    try {
+      if (window.localStorage && window.localStorage.getItem(ACCESS_STORAGE_KEY) === "true") return true;
+    } catch (e) {}
+    try {
+      if (window.sessionStorage && window.sessionStorage.getItem(ACCESS_STORAGE_KEY) === "true") return true;
+    } catch (e2) {}
+    return false;
+  }
+
+  function persistAccessGranted() {
+    try {
+      if (window.localStorage) window.localStorage.setItem(ACCESS_STORAGE_KEY, "true");
+    } catch (e) {}
+    try {
+      if (window.sessionStorage) window.sessionStorage.setItem(ACCESS_STORAGE_KEY, "true");
+    } catch (e2) {}
+  }
+
+  function initAccessGate() {
+    var root = document.documentElement;
+    if (!root || !document.body) return;
+    if (readStoredAccessGranted()) {
+      root.setAttribute("data-access-state", "granted");
+      return;
+    }
+
+    root.setAttribute("data-access-state", "locked");
+
+    if (document.querySelector(".access-gate")) return;
+
+    var navBrand = document.querySelector(".nav-brand");
+    var mark = document.querySelector(".nav-brand__mark");
+    var homeHref = (navBrand && navBrand.getAttribute("href")) || "#";
+    var markSrc = (mark && mark.getAttribute("src")) || "assets/inspiration/logo-raccoon.png";
+
+    var gate = document.createElement("section");
+    gate.className = "access-gate";
+    gate.setAttribute("role", "dialog");
+    gate.setAttribute("aria-modal", "true");
+    gate.setAttribute("aria-labelledby", "access-gate-title");
+    gate.innerHTML =
+      '<div class="access-gate__panel">' +
+      '<a class="access-gate__brand" href="' +
+      homeHref +
+      '" aria-label="lotor lab home">' +
+      '<img class="access-gate__mark" src="' +
+      markSrc +
+      '" alt="" width="56" height="56" decoding="async" />' +
+      '<span><span class="access-gate__eyebrow">Private Access</span><span class="access-gate__brand-name brand-mark">lotor lab</span></span>' +
+      "</a>" +
+      '<h1 id="access-gate-title" class="access-gate__title">Enter the access code</h1>' +
+      '<p class="access-gate__copy">This site is currently shared through a private access screen. Enter the code to continue.</p>' +
+      '<form class="access-gate__form" novalidate>' +
+      '<label class="access-gate__label" for="access-gate-input">Access code</label>' +
+      '<input id="access-gate-input" class="access-gate__field" name="code" type="password" autocomplete="current-password" spellcheck="false" placeholder="Enter code" />' +
+      '<div class="access-gate__actions">' +
+      '<button class="btn btn-ghost access-gate__submit" type="submit">Enter site</button>' +
+      '<p class="access-gate__error" aria-live="polite"></p>' +
+      "</div>" +
+      "</form>" +
+      "</div>";
+
+    document.body.appendChild(gate);
+
+    var form = gate.querySelector("form");
+    var input = gate.querySelector(".access-gate__field");
+    var error = gate.querySelector(".access-gate__error");
+
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      if ((input.value || "") === ACCESS_CODE) {
+        persistAccessGranted();
+        root.setAttribute("data-access-state", "granted");
+        gate.remove();
+        var main = document.getElementById("main");
+        if (main && typeof main.focus === "function") main.focus();
+        return;
+      }
+      error.textContent = "That code didn't match. Please try again.";
+      input.select();
+    });
+
+    window.setTimeout(function () {
+      if (input && typeof input.focus === "function") input.focus();
+    }, 40);
+  }
+
   var y = document.getElementById("y");
   if (y) y.textContent = new Date().getFullYear();
 
   var lotorHome = document.documentElement.classList.contains("lotor-home");
   var pageQual = document.documentElement.classList.contains("page-qual");
+  initAccessGate();
+
   function homeScrollRoot() {
     return lotorHome ? document.getElementById("home-scrollport") : null;
   }

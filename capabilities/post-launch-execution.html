@@ -10,6 +10,21 @@
     />
     <link rel="icon" href="../favicon.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+    <script>
+      (function () {
+        var key = "lotor-access-granted";
+        var granted = false;
+        try {
+          granted = window.localStorage.getItem(key) === "true";
+        } catch (e) {}
+        if (!granted) {
+          try {
+            granted = window.sessionStorage.getItem(key) === "true";
+          } catch (e2) {}
+        }
+        document.documentElement.setAttribute("data-access-state", granted ? "granted" : "locked");
+      })();
+    </script>
     <link rel="stylesheet" href="../styles.css?v=cap-read-1" />
   </head>
   <body>
