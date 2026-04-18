@@ -125,6 +125,7 @@ html[data-access-state="locked"] body > .access-gate * {
   z-index: 1200;
   display: grid;
   place-items: center;
+  isolation: isolate;
   padding: clamp(1.25rem, 4vw, 2rem);
   background:
     radial-gradient(circle at top, rgba(var(--gold-rgb), 0.12), transparent 36%),
@@ -136,6 +137,7 @@ html[data-access-state="locked"] body > .access-gate * {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 0;
   pointer-events: none;
 }
 
@@ -156,6 +158,7 @@ html[data-access-state="locked"] body > .access-gate * {
 
 .access-gate__panel {
   position: relative;
+  z-index: 1;
   width: min(100%, 31rem);
   padding: clamp(1.4rem, 4vw, 2.35rem);
   border: 1px solid rgba(var(--gold-rgb), 0.24);
