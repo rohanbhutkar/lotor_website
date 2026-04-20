@@ -157,7 +157,7 @@
          * relaxHomeMapCallouts overlap pushes often move right-anchored boxes +left% (outward).
          * Hard-cap right edge % after relax so the east column stays tucked toward Orion.
          */
-        postRelaxMaxRightEdgePct: 64,
+        postRelaxMaxRightEdgePct: 84,
         minVertGap: 10,
         vertLo: 11,
         vertHi: 89,
@@ -406,12 +406,20 @@
     var introDensity = w <= 760 ? "compact" : "regular";
     var introMode = "overlay";
     var contactMode = "overlay";
+    var mapUiMode = "overlay";
+    var roomyMapDesktop = !portrait && mapMode === "anchored";
+    var wideViewportBoost = roomyMapDesktop ? clampNumber((Math.min(w, 1800) - 1180) / 540, 0, 1) : 0;
+    var tallViewportBoost = roomyMapDesktop ? clampNumber((Math.min(h, 1100) - 760) / 260, 0, 1) : 0;
+    var largeViewportBoost = clampNumber(wideViewportBoost * 0.95 + tallViewportBoost * 0.55, 0, 1);
+    var overlayScaleBoost = 1 + largeViewportBoost * 0.32;
+    var overlayScaleMax = 1 + largeViewportBoost * 0.42;
+    var overlayTextScaleBoost = 1 + largeViewportBoost * 0.22;
     if (introMode !== "embedded") introShiftPx = 0;
-    var capLabelMax = Math.max(168, Math.min(240, Math.round(shortSide * 0.34)));
-    var capLabelMin = Math.max(122, Math.min(164, Math.round(shortSide * 0.2)));
+    var capLabelMax = Math.max(168, Math.min(340, Math.round(shortSide * 0.34 + largeViewportBoost * 64)));
+    var capLabelMin = Math.max(122, Math.min(208, Math.round(shortSide * 0.2 + largeViewportBoost * 32)));
     var narrowCapLabelMaxBlock = Math.max(172, Math.min(320, Math.round(Math.min(stageBlock * 0.42, shortSide * 0.34))));
-    var qualLabelW = Math.max(156, Math.min(222, Math.round(shortSide * 0.315)));
-    var qualLabelMin = Math.max(120, Math.min(156, Math.round(shortSide * 0.19)));
+    var qualLabelW = Math.max(156, Math.min(292, Math.round(shortSide * 0.315 + largeViewportBoost * 52)));
+    var qualLabelMin = Math.max(120, Math.min(184, Math.round(shortSide * 0.19 + largeViewportBoost * 20)));
     var narrowQualLabelMaxBlock = Math.max(148, Math.min(252, Math.round(Math.min(stageBlock * 0.3, shortSide * 0.27))));
     root.style.setProperty("--home-shell-inline-max", Math.round(shellInlineMax) + "px");
     root.style.setProperty("--home-overlay-shell-max", Math.round(overlayInlineMax) + "px");
@@ -420,6 +428,9 @@
     root.style.setProperty("--home-card-gap", Math.round(cardGap) + "px");
     root.style.setProperty("--home-overlay-shell-pad", Math.round(Math.max(10, overlayInset)) + "px");
     root.style.setProperty("--home-rail-reserve", railReserve + "px");
+    root.style.setProperty("--home-map-overlay-scale-boost", round4(overlayScaleBoost));
+    root.style.setProperty("--home-map-overlay-scale-max", round4(overlayScaleMax));
+    root.style.setProperty("--home-map-overlay-text-scale-boost", round4(overlayTextScaleBoost));
     root.style.setProperty("--home-cap-label-max-px", capLabelMax + "px");
     root.style.setProperty("--home-cap-label-min-px", capLabelMin + "px");
     root.style.setProperty("--home-cap-label-max-block", narrowCapLabelMaxBlock + "px");
@@ -433,6 +444,7 @@
     root.setAttribute("data-home-box-density", boxDensity);
     root.setAttribute("data-home-map-mode", mapMode);
     root.setAttribute("data-home-map-density", mapDensity);
+    root.setAttribute("data-home-map-ui-mode", mapUiMode);
     root.setAttribute("data-home-box-band", narrowAnchored ? "narrow" : "regular");
     root.setAttribute("data-home-intro-layout", introLayout);
     root.setAttribute("data-home-intro-density", introDensity);
@@ -718,6 +730,7 @@
   var homeMapCalloutRelayoutTimer = null;
   var homeActiveSceneLayoutTimers = [];
   var homeFixedStackLayer = null;
+  var homeFixedMapLabelLayer = null;
 
   function isHomeMapCalloutScene(sceneId) {
     return sceneId === "capabilities" || sceneId === "quals";
@@ -725,6 +738,14 @@
 
   function homeMapCalloutLayoutMode() {
     return document.documentElement.getAttribute("data-home-map-mode") || "anchored";
+  }
+
+  function homeMapCalloutUiMode() {
+    return document.documentElement.getAttribute("data-home-map-ui-mode") || "overlay";
+  }
+
+  function useHomeMapCalloutOverlay(sceneId) {
+    return canLayoutHomeMapCalloutScene(sceneId) && homeMapCalloutUiMode() === "overlay";
   }
 
   function canLayoutHomeMapCalloutScene(sceneId) {
@@ -802,6 +823,146 @@
 
   function setMapLabelPx(el, left, top) {
     setMapLabelPos(el, left, top, "px");
+  }
+
+  function mapLabelNodeKey(el) {
+    if (!el || typeof el.getAttribute !== "function") return "";
+    return el.getAttribute("data-label-id") || el.id || "";
+  }
+
+  function homeMapSourceLabelContainer(sceneId) {
+    if (!isHomeMapCalloutScene(sceneId)) return null;
+    return document.querySelector(
+      '.home-sky-scene[data-scene="' + sceneId + '"] .home-map-const-labels[data-fo-labels="' + sceneId + '"]'
+    );
+  }
+
+  function populateHomeMapAnchoredDeck(deck, sceneId) {
+    if (!deck || !isHomeMapCalloutScene(sceneId)) return 0;
+    var container = deck.querySelector('.home-map-const-labels[data-fo-labels="' + sceneId + '"]');
+    if (!container) return 0;
+    container.innerHTML = "";
+    var source = homeMapSourceLabelContainer(sceneId);
+    var kids = source ? source.querySelectorAll(".home-map-const-label") : [];
+    var i;
+    for (i = 0; i < kids.length; i++) {
+      var clone = kids[i].cloneNode(true);
+      var sourceId = clone.id || kids[i].id || "";
+      if (sourceId) {
+        clone.setAttribute("data-label-id", sourceId);
+        clone.removeAttribute("id");
+      }
+      container.appendChild(clone);
+    }
+    return kids.length;
+  }
+
+  function ensureHomeFixedMapLabelLayer() {
+    if (!lotorHome || !document.body) return null;
+    if (homeFixedMapLabelLayer && homeFixedMapLabelLayer.isConnected) return homeFixedMapLabelLayer;
+    var existing = document.querySelector(".home-fixed-map-label-layer");
+    if (existing) {
+      homeFixedMapLabelLayer = existing;
+      return existing;
+    }
+    var layer = document.createElement("div");
+    layer.className = "home-fixed-map-label-layer";
+    layer.hidden = true;
+    layer.setAttribute("aria-hidden", "true");
+    document.body.appendChild(layer);
+    homeFixedMapLabelLayer = layer;
+    return layer;
+  }
+
+  function ensureHomeMapAnchoredDeck(sceneId) {
+    if (!useHomeMapCalloutOverlay(sceneId)) return null;
+    var layer = ensureHomeFixedMapLabelLayer();
+    if (!layer) return null;
+    var existing = layer.querySelector('.home-map-anchored[data-anchored-scene="' + sceneId + '"]');
+    if (existing) {
+      return existing;
+    }
+    var deck = document.createElement("div");
+    deck.className = "home-map-anchored";
+    deck.setAttribute("data-anchored-scene", sceneId);
+    deck.hidden = true;
+    deck.setAttribute("aria-hidden", "true");
+
+    var scenePadClass = sceneId === "quals" ? "home-map-label-layer--pad-quals" : "home-map-label-layer--pad-cap";
+    var labelLayer = document.createElement("div");
+    labelLayer.className = "home-map-label-layer home-map-label-layer--overlay " + scenePadClass;
+
+    var container = document.createElement("div");
+    container.className = "const-labels home-map-const-labels";
+    container.setAttribute("data-fo-labels", sceneId);
+    container.setAttribute("role", "region");
+    container.setAttribute(
+      "aria-label",
+      sceneId === "capabilities" ? "Capability stars on the map" : "Qualification stars on the map"
+    );
+
+    labelLayer.appendChild(container);
+    deck.appendChild(labelLayer);
+    layer.appendChild(deck);
+    populateHomeMapAnchoredDeck(deck, sceneId);
+    return deck;
+  }
+
+  function homeMapActiveDeck(sceneId) {
+    if (!isHomeMapCalloutScene(sceneId)) return null;
+    if (useHomeMapCalloutOverlay(sceneId)) {
+      return ensureHomeMapAnchoredDeck(sceneId);
+    }
+    return null;
+  }
+
+  function homeMapActiveLabelContainer(sceneId) {
+    if (!isHomeMapCalloutScene(sceneId)) return null;
+    if (useHomeMapCalloutOverlay(sceneId)) {
+      var deck = homeMapActiveDeck(sceneId);
+      return deck ? deck.querySelector('.home-map-const-labels[data-fo-labels="' + sceneId + '"]') : null;
+    }
+    return homeMapSourceLabelContainer(sceneId);
+  }
+
+  function homeMapActiveLabelLayer(sceneId) {
+    var container = homeMapActiveLabelContainer(sceneId);
+    return container ? container.closest(".home-map-label-layer") : null;
+  }
+
+  function homeMapActiveLabelById(sceneId, id) {
+    if (!id) return null;
+    var container = homeMapActiveLabelContainer(sceneId);
+    if (!container) return null;
+    if (useHomeMapCalloutOverlay(sceneId)) {
+      return container.querySelector('[data-label-id="' + id + '"]');
+    }
+    return container.querySelector('[id="' + id + '"]');
+  }
+
+  function syncHomeFixedMapLabelLayer(sceneIdOverride) {
+    if (!lotorHome) return;
+    var layer = ensureHomeFixedMapLabelLayer();
+    if (!layer) return;
+    var showScene = "";
+    var mapMode = homeMapCalloutLayoutMode();
+    var uiMode = homeMapCalloutUiMode();
+    var sceneId = sceneIdOverride || activeSceneId;
+    if (!detailOpen && uiMode === "overlay" && mapMode !== "stacked" && isHomeMapCalloutScene(sceneId)) {
+      showScene = sceneId;
+      var showDeck = ensureHomeMapAnchoredDeck(sceneId);
+      if (showDeck) populateHomeMapAnchoredDeck(showDeck, sceneId);
+    }
+    var decks = layer.querySelectorAll(".home-map-anchored[data-anchored-scene]");
+    var i;
+    for (i = 0; i < decks.length; i++) {
+      var deck = decks[i];
+      var on = !!showScene && deck.getAttribute("data-anchored-scene") === showScene;
+      deck.hidden = !on;
+      deck.setAttribute("aria-hidden", on ? "false" : "true");
+    }
+    layer.hidden = !showScene;
+    layer.setAttribute("aria-hidden", showScene ? "false" : "true");
   }
 
   function buildHomeMobileCard(labelEl) {
@@ -884,7 +1045,7 @@
 
   function populateHomeMobileStackCards(cards, sceneId) {
     if (!cards) return 0;
-    var source = document.querySelector('.home-map-const-labels[data-fo-labels="' + sceneId + '"]');
+    var source = homeMapSourceLabelContainer(sceneId);
     var kids = source ? source.querySelectorAll(".home-map-const-label") : [];
     var i;
     cards.innerHTML = "";
@@ -1092,25 +1253,54 @@
     ensureHomeMobileStackDeck("capabilities");
     ensureHomeMobileStackDeck("quals");
     ensureHomeContactStackDeck();
+    ensureHomeMapAnchoredDeck("capabilities");
+    ensureHomeMapAnchoredDeck("quals");
     syncHomeFixedStackLayer();
+    syncHomeFixedMapLabelLayer();
   }
 
   function skySvgScreenMatrices() {
     var svg = document.querySelector(".home-map-overlay.sky-unified");
-    if (!svg || typeof svg.getScreenCTM !== "function" || typeof svg.createSVGPoint !== "function") return null;
-    var ctm = svg.getScreenCTM();
-    if (!ctm) return null;
-    return { svg: svg, ctm: ctm };
+    if (!svg || !fixedCelestial || typeof fixedCelestial.getBoundingClientRect !== "function") return null;
+    var rect = fixedCelestial.getBoundingClientRect();
+    if (!(rect.width > 1) || !(rect.height > 1)) return null;
+    var style = getComputedStyle(fixedCelestial);
+    var cover = parseFloat(style.getPropertyValue("--sky-cover")) || coverScaleFromLayout();
+    var zoom = parseFloat(style.getPropertyValue("--sky-zoom-mult")) || 1;
+    var panX = parseFloat(style.getPropertyValue("--sky-pan-x")) || 0;
+    var panY = parseFloat(style.getPropertyValue("--sky-pan-y")) || 0;
+    var parallaxX = parseFloat(style.getPropertyValue("--sky-parallax-x")) || 0;
+    var parallaxY = parseFloat(style.getPropertyValue("--sky-parallax-y")) || 0;
+    if (!(cover > 0)) return null;
+    if (!(zoom > 0)) zoom = 1;
+    return {
+      svg: svg,
+      rect: rect,
+      cover: cover,
+      zoom: zoom,
+      panX: panX,
+      panY: panY,
+      parallaxX: parallaxX,
+      parallaxY: parallaxY,
+    };
   }
 
   function skyMapPointToClient(mx, my, mats) {
     mats = mats || skySvgScreenMatrices();
     if (!mats) return null;
-    var pt = mats.svg.createSVGPoint();
-    pt.x = mx;
-    pt.y = my;
-    var out = pt.matrixTransform(mats.ctm);
-    return { x: out.x, y: out.y };
+    return {
+      x: mats.rect.left + mats.panX + mats.parallaxX + mats.zoom * ((mx - VB_X0) * mats.cover),
+      y: mats.rect.top + mats.panY + mats.parallaxY + mats.zoom * ((my - VB_Y0) * mats.cover),
+    };
+  }
+
+  function clientPointToSkyMap(cx, cy, mats) {
+    mats = mats || skySvgScreenMatrices();
+    if (!mats || !(mats.cover > 0) || !(mats.zoom > 0)) return null;
+    return {
+      x: (cx - mats.rect.left - mats.panX - mats.parallaxX) / (mats.zoom * mats.cover) + VB_X0,
+      y: (cy - mats.rect.top - mats.panY - mats.parallaxY) / (mats.zoom * mats.cover) + VB_Y0,
+    };
   }
 
   function elementLocalMetrics(el) {
@@ -1190,8 +1380,19 @@
     return out;
   }
 
-  function distributeViewportLaneCenters(rows, laneTop, laneBottom, gapPx) {
+  function overlapPushVector(ax, ay, bx, by, push, preferVertical) {
+    var dx = bx - ax;
+    var dy = by - ay;
+    var len = Math.hypot(dx, dy);
+    if (len > 0.5) {
+      return { x: (dx / len) * push, y: (dy / len) * push };
+    }
+    return preferVertical ? { x: 0, y: push } : { x: push, y: 0 };
+  }
+
+  function distributeViewportLaneCenters(rows, laneTop, laneBottom, gapPx, evenSpreadBlend) {
     if (!rows || !rows.length) return;
+    evenSpreadBlend = clampNumber(evenSpreadBlend, 0, 1);
     rows.sort(function (a, b) {
       if (a.idealCy !== b.idealCy) return a.idealCy - b.idealCy;
       return a.starClient.y - b.starClient.y;
@@ -1211,6 +1412,12 @@
       rows.length > 1
         ? Math.max(0, Math.min(gapPx, (laneHeight - totalHeight) / (rows.length - 1)))
         : 0;
+    for (i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var evenNorm = (i + 1) / (rows.length + 1);
+      var evenCy = row.minCy + (row.maxCy - row.minCy) * evenNorm;
+      row.idealCy = row.idealCy * (1 - evenSpreadBlend) + evenCy * evenSpreadBlend;
+    }
 
     function forwardPack() {
       var prev = null;
@@ -1314,8 +1521,8 @@
     if (!placed || !placed.length) return false;
     var mats = skySvgScreenMatrices();
     if (!mats) return false;
-    var container = document.querySelector('.home-map-const-labels[data-fo-labels="' + sceneId + '"]');
-    var layer = container && container.closest(".home-map-label-layer");
+    var container = homeMapActiveLabelContainer(sceneId);
+    var layer = homeMapActiveLabelLayer(sceneId);
     if (!container || !layer) return false;
     var containerMetrics = elementLocalMetrics(container);
     if (!containerMetrics) return false;
@@ -1383,8 +1590,13 @@
     var rightMaxW = maxWidth(rightRows);
     var safeW = Math.max(120, safe.right - safe.left);
     var safeMid = (safe.left + safe.right) * 0.5;
-    var bandFrac = narrowBand ? (sceneId === "capabilities" ? 0.12 : 0.11) : sceneId === "capabilities" ? 0.18 : 0.16;
+    var sideLaneT = sceneId === "capabilities" ? (narrowBand ? 0.2 : 0.14) : narrowBand ? 0.26 : 0.2;
     var laneGap = narrowBand ? Math.max(10, Math.min(20, shortSide * 0.018)) : Math.max(12, Math.min(26, shortSide * 0.022));
+    var verticalSpreadBlend =
+      sceneId === "capabilities" ? (narrowBand ? 0.74 : 0.88) : narrowBand ? 0.68 : 0.82;
+    var starMidBlend = sceneId === "capabilities" ? (narrowBand ? 0.08 : 0.04) : narrowBand ? 0.12 : 0.06;
+    var driftStarScale = sceneId === "capabilities" ? 0.24 : 0.18;
+    var driftRankScale = sceneId === "capabilities" ? 0.1 : 0.08;
     var leftBandLo = safe.left + edgeInset;
     var leftBandHi = safeMid - focusGap - leftMaxW;
     var rightBandLo = safeMid + focusGap + rightMaxW;
@@ -1393,8 +1605,10 @@
       leftBandHi = Math.min(leftBandHi, constellation.left - constellation.gapX - leftMaxW);
       rightBandLo = Math.max(rightBandLo, constellation.right + constellation.gapX + rightMaxW);
     }
-    var leftColLeft = safe.left + safeW * bandFrac;
-    var rightColEdge = safe.right - safeW * bandFrac;
+    var leftBandW = Math.max(0, leftBandHi - leftBandLo);
+    var rightBandW = Math.max(0, rightBandHi - rightBandLo);
+    var leftColLeft = leftBandLo + leftBandW * sideLaneT;
+    var rightColEdge = rightBandHi - rightBandW * sideLaneT;
     if (leftBandHi > leftBandLo) {
       leftColLeft = Math.max(leftBandLo, Math.min(leftBandHi, leftColLeft));
     } else {
@@ -1405,33 +1619,27 @@
     } else {
       rightColEdge = rightBandHi;
     }
-    if (focusClient.x < safeMid - safeW * 0.08) {
-      rightColEdge = Math.max(rightBandLo, Math.min(rightBandHi, rightColEdge - safeW * 0.04));
-    } else if (focusClient.x > safeMid + safeW * 0.08) {
-      leftColLeft = Math.max(leftBandLo, Math.min(leftBandHi, leftColLeft + safeW * 0.04));
-    }
 
     function placeSide(sideRows, isLeft, columnBase, minAnchor, maxAnchor) {
       if (!sideRows.length) return;
       var safeMidY = (safe.top + safe.bottom) * 0.5;
-      var blend = narrowBand ? 0.24 : 0.11;
       var starMinX = Infinity;
       var starMaxX = -Infinity;
       var minLaneWidth = minWidth(sideRows);
       sideRows.forEach(function (row) {
         starMinX = Math.min(starMinX, row.starClient.x);
         starMaxX = Math.max(starMaxX, row.starClient.x);
-        row.idealCy = row.starClient.y * (1 - blend) + safeMidY * blend;
+        row.idealCy = row.starClient.y * (1 - starMidBlend) + safeMidY * starMidBlend;
       });
-      distributeViewportLaneCenters(sideRows, safe.top + topInset, safe.bottom - topInset, laneGap);
+      distributeViewportLaneCenters(sideRows, safe.top + topInset, safe.bottom - topInset, laneGap, verticalSpreadBlend);
       var starSpan = Math.max(1, starMaxX - starMinX);
-      var focusSpan = Math.max(8, safeW * (narrowBand ? 0.035 : 0.05));
+      var focusSpan = Math.max(8, safeW * (narrowBand ? 0.026 : 0.034));
       sideRows.forEach(function (row, index) {
         var starNorm = clampNumber((row.starClient.x - starMinX) / starSpan, 0, 1);
         var rankNorm = sideRows.length <= 1 ? 0.5 : index / (sideRows.length - 1);
         var signedStar = isLeft ? starNorm - 0.5 : 0.5 - starNorm;
         var signedRank = rankNorm - 0.5;
-        var inwardDrift = signedStar * focusSpan * 0.55 + signedRank * focusSpan * 0.25;
+        var inwardDrift = signedStar * focusSpan * driftStarScale + signedRank * focusSpan * driftRankScale;
         var anchorX = columnBase + inwardDrift;
         if (isLeft) {
           var rowMaxAnchor = safeMid - focusGap - row.rect.width;
@@ -1471,10 +1679,12 @@
 
     var placedById = Object.create(null);
     rows.forEach(function (row) {
-      placedById[row.el.id] = row;
+      var key = mapLabelNodeKey(row.el);
+      if (!key) return;
+      placedById[key] = row;
     });
     placed.forEach(function (row) {
-      var match = placedById[row.el.id];
+      var match = placedById[mapLabelNodeKey(row.el)];
       if (!match) return;
       row.leftPx = match.leftPx;
       row.topPx = match.topPx;
@@ -1707,7 +1917,7 @@
 
     for (i = 0; i < pts.length; i++) {
       var p = pts[i];
-      var el = document.getElementById(p.id);
+      var el = homeMapActiveLabelById(sceneId, p.id);
       if (!el) continue;
 
       /* Map units: keeps stars just east of scene focus x on the left rail. */
@@ -1931,10 +2141,9 @@
     if (!lotorHome || detailOpen) return;
     if (sceneId !== "capabilities" && sceneId !== "quals") return;
     var svg = document.querySelector(".home-map-overlay.sky-unified");
-    if (!svg || typeof svg.getScreenCTM !== "function" || typeof svg.createSVGPoint !== "function") return;
-    var ctm = svg.getScreenCTM();
-    if (!ctm) return;
-    var inv = ctm.inverse();
+    if (!svg) return;
+    var mats = skySvgScreenMatrices();
+    if (!mats) return;
     var sceneG = svg.querySelector('.home-sky-scene[data-scene="' + sceneId + '"]');
     if (!sceneG || sceneG.style.display === "none") return;
     var gSel = sceneId === "quals" ? ".home-quals-leaders" : ".home-cap-leaders";
@@ -1942,19 +2151,11 @@
     if (!g) return;
 
     function starToClient(sx, sy) {
-      var pt = svg.createSVGPoint();
-      pt.x = sx;
-      pt.y = sy;
-      var p = pt.matrixTransform(ctm);
-      return { x: p.x, y: p.y };
+      return skyMapPointToClient(sx, sy, mats);
     }
 
     function clientToMap(x, y) {
-      var pt = svg.createSVGPoint();
-      pt.x = x;
-      pt.y = y;
-      var p = pt.matrixTransform(inv);
-      return { x: p.x, y: p.y };
+      return clientPointToSkyMap(x, y, mats);
     }
 
     /** Pick y on [yMin,yMax] along a vertical edge so distance from sc to (xe,y) ≈ L (px). */
@@ -1996,7 +2197,7 @@
       var line = linesArr[idx];
       var id = line.getAttribute("data-leader-anchor");
       if (!id) continue;
-      var el = document.getElementById(id);
+      var el = homeMapActiveLabelById(sceneId, id);
       if (!el) continue;
       var x1 = parseFloat(line.getAttribute("x1"));
       var y1 = parseFloat(line.getAttribute("y1"));
@@ -2038,6 +2239,7 @@
       var xe = p.isLeft ? r2.right : r2.left;
       var ay = attachYForTargetLength(p.sc, xe, yLo2, yHi2, targetLen);
       var mp = clientToMap(xe, ay);
+      if (!mp) continue;
       p.line.setAttribute("x2", mp.x.toFixed(2));
       p.line.setAttribute("y2", mp.y.toFixed(2));
     }
@@ -2102,8 +2304,8 @@
     var top = topSafe;
     var right = w - railReserve - m;
     var bottom = h - m;
-    /* Qualifications: rail shrinks safe.right only; mirror that inset on the left so L/R columns relax symmetrically. */
-    if (sceneId === "quals" && railReserve > 0) {
+    /* Map callout scenes should distribute against a centered safe band, not a rail-shifted viewport. */
+    if ((sceneId === "quals" || sceneId === "capabilities") && railReserve > 0) {
       left = m + railReserve;
     }
     if (right - left < S.minInner || bottom - top < S.minInner) {
@@ -2123,9 +2325,9 @@
     if (!lotorHome || detailOpen) return;
     if (sceneId !== "capabilities" && sceneId !== "quals") return;
 
-    var container = document.querySelector('.home-map-const-labels[data-fo-labels="' + sceneId + '"]');
+    var container = homeMapActiveLabelContainer(sceneId);
     if (!container) return;
-    var layer = container.closest(".home-map-label-layer");
+    var layer = homeMapActiveLabelLayer(sceneId);
     if (!layer) return;
 
     var els = [].slice.call(container.querySelectorAll("a.home-map-const-label"));
@@ -2242,9 +2444,9 @@
           var ay = (a.top + a.bottom) / 2;
           var bx = (b.left + b.right) / 2;
           var by = (b.top + b.bottom) / 2;
-          var len = Math.hypot(bx - ax, by - ay) || 1;
-          var pdx = ((bx - ax) / len) * push;
-          var pdy = ((by - ay) / len) * push;
+          var pushVec = overlapPushVector(ax, ay, bx, by, push, isLeftFlank[i] === isLeftFlank[j]);
+          var pdx = pushVec.x;
+          var pdy = pushVec.y;
           ndl[i] -= deltaClientToBaseX(pdx, lr.width);
           ndt[i] -= deltaClientToBaseY(pdy, lr.height);
           ndl[j] += deltaClientToBaseX(pdx, lr.width);
@@ -2361,9 +2563,9 @@
           ay = (a.top + a.bottom) / 2;
           bx = (b.left + b.right) / 2;
           by = (b.top + b.bottom) / 2;
-          len = Math.hypot(bx - ax, by - ay) || 1;
-          pdx = ((bx - ax) / len) * pushSep;
-          pdy = ((by - ay) / len) * pushSep;
+          var sepVec = overlapPushVector(ax, ay, bx, by, pushSep, isLeftFlank[i] === isLeftFlank[j]);
+          pdx = sepVec.x;
+          pdy = sepVec.y;
           ndl[i] -= deltaClientToBaseX(pdx, lr.width);
           ndt[i] -= deltaClientToBaseY(pdy, lr.height);
           ndl[j] += deltaClientToBaseX(pdx, lr.width);
@@ -2418,7 +2620,7 @@
   function clampCapabilitiesRightFlankAfterRelax() {
     var Cap2 = LOTOR_HOME_MAP_TUNING.placement.capabilities2x2;
     if (!Cap2 || Cap2.postRelaxMaxRightEdgePct == null) return;
-    var container = document.querySelector('.home-map-const-labels[data-fo-labels="capabilities"]');
+    var container = homeMapActiveLabelContainer("capabilities");
     if (!container) return;
     var sample = container.querySelector("a.home-map-const-label.const-label--right");
     if (!sample) return;
@@ -2443,6 +2645,7 @@
     if (!lotorHome || detailOpen || !canLayoutHomeMapCalloutScene(sceneId)) return false;
     var sceneG = document.querySelector('.home-sky-scene[data-scene="' + sceneId + '"]');
     if (!sceneG || sceneG.style.display === "none") return false;
+    syncHomeFixedMapLabelLayer(sceneId);
     applyCentroidMapLabelBases(sceneId, layoutSnapshot);
     relaxHomeMapCallouts(sceneId, layoutSnapshot);
     if (sceneId === "capabilities") {
@@ -2459,6 +2662,7 @@
     syncHomeLayoutViewport();
     syncHomeMapViewportCss();
     syncHomeMapOverlay(sceneId);
+    syncHomeFixedMapLabelLayer(sceneId);
 
     if (sceneId === "capabilities" || sceneId === "quals") {
       ensureHomeMobileStackDeck(sceneId);
@@ -2593,6 +2797,7 @@
     markHomeMapCalloutDirty("capabilities");
     markHomeMapCalloutDirty("quals");
     syncHomeMapOverlay(activeSceneId);
+    syncHomeFixedMapLabelLayer();
     applySkyForScene(activeSceneId);
     requestAnimationFrame(function () {
       var sid = activeSceneId;
@@ -2636,6 +2841,7 @@
         homePrecomputeSafetyTimer = null;
       }
       syncHomeMapOverlay(activeSceneId);
+      syncHomeFixedMapLabelLayer();
       applySkyForScene(activeSceneId);
       requestAnimationFrame(function () {
         var sid = activeSceneId;
@@ -2981,6 +3187,7 @@
     syncHomeMapOverlay(id);
     syncHomeQualsStrip();
     syncHomeFixedStackLayer();
+    syncHomeFixedMapLabelLayer();
     if (!detailOpen) {
       beginSkyTransformEase();
       scheduleActiveHomeSceneLayoutSync(id, HOME_SCENE_ENTRY_LAYOUT_DELAYS);
@@ -3376,6 +3583,7 @@
     syncHomeMapOverlay(activeSceneId);
     syncHomeQualsStrip();
     syncHomeFixedStackLayer();
+    syncHomeFixedMapLabelLayer();
     updateSkyParallaxFromScroll();
     if (detailLoadingEl) {
       detailLoadingEl.hidden = false;
@@ -3460,6 +3668,7 @@
         syncHomeMapOverlay(activeSceneId);
         syncHomeQualsStrip();
         syncHomeFixedStackLayer();
+        syncHomeFixedMapLabelLayer();
         try {
           detailDialog.close();
         } catch (e) {}
@@ -3491,6 +3700,7 @@
     syncHomeMapOverlay(activeSceneId);
     syncHomeQualsStrip();
     syncHomeFixedStackLayer();
+    syncHomeFixedMapLabelLayer();
     if (lotorHome) scheduleActiveHomeSceneLayoutSync(activeSceneId, HOME_SCENE_ENTRY_LAYOUT_DELAYS);
     if (lastFocusBeforeDetail && typeof lastFocusBeforeDetail.focus === "function") {
       try {
@@ -3528,6 +3738,7 @@
       headerBottom: hb >= 0 ? hb : 0,
     });
     syncHomeFixedStackLayer();
+    syncHomeFixedMapLabelLayer();
   }
 
   /** Header scrim + progress bar from one scroll read (home: #home-scrollport, inner: window). */
