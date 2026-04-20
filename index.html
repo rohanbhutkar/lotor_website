@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="lotor-home" data-home-scene="intro">
+<html lang="en" class="lotor-home" data-home-scene="intro" data-home-intro-mode="overlay" data-home-contact-mode="overlay">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -32,7 +32,7 @@
       })();
     </script>
     <link rel="preload" href="sky-manifest.json" as="fetch" crossorigin="anonymous" />
-    <link rel="stylesheet" href="styles.css?v=site-9" />
+    <link rel="stylesheet" href="styles.css?v=site-16" />
   </head>
   <body>
     <a class="skip-link" href="#home-scrollport">Skip to main content</a>
@@ -64,38 +64,42 @@
               <!-- Wider than before so intro columns are not clipped at the SVG foreignObject edge -->
               <foreignObject x="-218" y="-18.8" width="1240" height="1123" overflow="visible">
                 <div xmlns="http://www.w3.org/1999/xhtml" class="home-fo home-fo--intro" data-fo-scene="intro">
-                  <div class="home-fo__panel home-fo__panel--hero">
-                    <div class="intro-hero">
-                      <header class="intro-hero__brand">
-                        <h1 id="intro-heading" class="hero-site-title"><span class="brand-mark">lotor lab</span></h1>
-                        <p class="hero-subtitle">
-                          Innovating on R&amp;D<br class="hero-subtitle__break" aria-hidden="true" />
-                          <span class="hero-subtitle__rest">through Adaptable Evidence Generation</span>
-                        </p>
-                      </header>
-                      <div class="intro-hero__vista" aria-hidden="true"></div>
-                      <aside class="intro-hero__story" aria-label="About lotor lab">
-                        <p>
-                          Inspired by the clever <i lang="la">Procyon lotor</i>, we built
-                          <span class="brand-mark">lotor lab</span>—serving our clients with the
-                          same resiliency and adaptability.
-                        </p>
-                        <p>
-                          We excel in supporting first-in-class therapies where no clear precedent exists, applying resourceful,
-                          original thinking to identify the right clinical and real-world evidence that maximizes probability of
-                          success.
-                        </p>
-                        <p class="intro-hero__closing">
-                          Regulatory approval is rarely driven by a single point, but rather by a carefully assembled constellation
-                          of evidence.
-                        </p>
-                      </aside>
+                  <div class="home-fo__shift-shell home-fo__shift-shell--intro">
+                    <div class="home-fo__scale-shell home-fo__scale-shell--intro">
+                      <div class="home-fo__panel home-fo__panel--hero">
+                        <div class="intro-hero">
+                          <header class="intro-hero__brand">
+                            <h1 id="intro-heading" class="hero-site-title"><span class="brand-mark">lotor lab</span></h1>
+                            <p class="hero-subtitle">
+                              Innovating on R&amp;D<br class="hero-subtitle__break" aria-hidden="true" />
+                              <span class="hero-subtitle__rest">through Adaptable Evidence Generation</span>
+                            </p>
+                          </header>
+                          <div class="intro-hero__vista" aria-hidden="true"></div>
+                          <aside class="intro-hero__story" aria-label="About lotor lab">
+                            <p>
+                              Inspired by the clever <i lang="la">Procyon lotor</i>, we built
+                              <span class="brand-mark">lotor lab</span>—serving our clients with the
+                              same resiliency and adaptability.
+                            </p>
+                            <p>
+                              We excel in supporting first-in-class therapies where no clear precedent exists, applying resourceful,
+                              original thinking to identify the right clinical and real-world evidence that maximizes probability of
+                              success.
+                            </p>
+                            <p class="intro-hero__closing">
+                              Regulatory approval is rarely driven by a single point, but rather by a carefully assembled constellation
+                              of evidence.
+                            </p>
+                          </aside>
+                        </div>
+                        <nav class="hero-cta hero-cta--below-start" aria-label="Start">
+                          <a class="btn btn-ghost" href="#capabilities">Capabilities</a>
+                          <a class="btn btn-ghost" href="#quals">Qualifications</a>
+                          <a class="btn btn-ghost" href="#contact">Get in touch</a>
+                        </nav>
+                      </div>
                     </div>
-                    <nav class="hero-cta hero-cta--below-start" aria-label="Start">
-                      <a class="btn btn-ghost" href="#capabilities">Capabilities</a>
-                      <a class="btn btn-ghost" href="#quals">Qualifications</a>
-                      <a class="btn btn-ghost" href="#contact">Get in touch</a>
-                    </nav>
                   </div>
                 </div>
               </foreignObject>
@@ -282,51 +286,55 @@
             <g class="home-sky-scene" data-scene="contact" fill="none" style="display: none">
               <foreignObject x="498.2" y="459.3" width="472.5" height="630.7" overflow="visible">
                 <div xmlns="http://www.w3.org/1999/xhtml" class="home-fo" data-fo-scene="contact">
-                  <div class="home-fo__panel home-fo__panel--contact">
-                    <div class="deck-header-aside home-fo__deck-head contact-fo__head">
-                      <div>
-                        <h2 id="contact-heading">Contact</h2>
+                  <div class="home-fo__shift-shell home-fo__shift-shell--contact">
+                    <div class="home-fo__scale-shell home-fo__scale-shell--contact">
+                      <div class="home-fo__panel home-fo__panel--contact">
+                        <div class="deck-header-aside home-fo__deck-head contact-fo__head">
+                          <div>
+                            <h2 id="contact-heading">Contact</h2>
+                          </div>
+                          <p class="lede const-section__lede deck-header-aside__lede contact-fo__lede">
+                            Reach the founders directly—we read everything.
+                          </p>
+                        </div>
+                        <div class="const-deck contact-fo__deck">
+                          <div class="const-deck__grid const-deck__grid--contact contact-team" role="list">
+                            <article class="const-deck__card contact-card" id="const-contact-email1" role="listitem">
+                              <div class="contact-card__head">
+                                <h3 class="contact-card__name">Michelle Guo</h3>
+                                <p class="contact-card__role">Co-Founder &amp; CEO</p>
+                              </div>
+                              <div class="contact-card__body">
+                                <p class="contact-card__summary">Previously Clinical R&amp;D Portfolio Leader at Deloitte</p>
+                                <p class="contact-card__meta">Computational Biology, UChicago · Epidemiology, Yale</p>
+                              </div>
+                              <a class="btn btn-ghost btn-email contact-card__email" href="mailto:michelle@lotorlab.com"
+                                >michelle@lotorlab.com</a
+                              >
+                            </article>
+                            <article class="const-deck__card contact-card" id="const-contact-email2" role="listitem">
+                              <div class="contact-card__head">
+                                <h3 class="contact-card__name">Rohan Bhutkar</h3>
+                                <p class="contact-card__role">Co-Founder &amp; CTO</p>
+                              </div>
+                              <div class="contact-card__body">
+                                <p class="contact-card__summary">Previously Lead Engineer in Clinical R&amp;D at Deloitte</p>
+                                <p class="contact-card__meta">Interdepartmental Immunology, McGill · Epidemiology, Imperial</p>
+                              </div>
+                              <a class="btn btn-ghost btn-email contact-card__email" href="mailto:rohan@lotorlab.com"
+                                >rohan@lotorlab.com</a
+                              >
+                            </article>
+                          </div>
+                        </div>
+                        <footer class="home-fo__footer">
+                          <div class="footer-inner">
+                            <a class="footer-brand brand-mark" href="#intro">lotor lab</a>
+                            <span class="footer-copy">&copy; <span id="y"></span></span>
+                          </div>
+                        </footer>
                       </div>
-                      <p class="lede const-section__lede deck-header-aside__lede contact-fo__lede">
-                        Reach the founders directly—we read everything.
-                      </p>
                     </div>
-                    <div class="const-deck contact-fo__deck">
-                      <div class="const-deck__grid const-deck__grid--contact contact-team" role="list">
-                        <article class="const-deck__card contact-card" id="const-contact-email1" role="listitem">
-                          <div class="contact-card__head">
-                            <h3 class="contact-card__name">Michelle Guo</h3>
-                            <p class="contact-card__role">Co-Founder &amp; CEO</p>
-                          </div>
-                          <div class="contact-card__body">
-                            <p class="contact-card__summary">Previously Clinical R&amp;D Portfolio Leader at Deloitte</p>
-                            <p class="contact-card__meta">Computational Biology, UChicago · Epidemiology, Yale</p>
-                          </div>
-                          <a class="btn btn-ghost btn-email contact-card__email" href="mailto:michelle@lotorlab.com"
-                            >michelle@lotorlab.com</a
-                          >
-                        </article>
-                        <article class="const-deck__card contact-card" id="const-contact-email2" role="listitem">
-                          <div class="contact-card__head">
-                            <h3 class="contact-card__name">Rohan Bhutkar</h3>
-                            <p class="contact-card__role">Co-Founder &amp; CTO</p>
-                          </div>
-                          <div class="contact-card__body">
-                            <p class="contact-card__summary">Previously Lead Engineer in Clinical R&amp;D at Deloitte</p>
-                            <p class="contact-card__meta">Interdepartmental Immunology, McGill · Epidemiology, Imperial</p>
-                          </div>
-                          <a class="btn btn-ghost btn-email contact-card__email" href="mailto:rohan@lotorlab.com"
-                            >rohan@lotorlab.com</a
-                          >
-                        </article>
-                      </div>
-                    </div>
-                    <footer class="home-fo__footer">
-                      <div class="footer-inner">
-                        <a class="footer-brand brand-mark" href="#intro">lotor lab</a>
-                        <span class="footer-copy">&copy; <span id="y"></span></span>
-                      </div>
-                    </footer>
                   </div>
                 </div>
               </foreignObject>
@@ -363,7 +371,12 @@
         document.documentElement.style.setProperty("--sky-layout-h", vh + "px");
         document.documentElement.style.setProperty("--viewport-w", vw + "px");
         document.documentElement.style.setProperty("--viewport-h", vh + "px");
-        fc.style.setProperty("--sky-cover", String(Math.max(vw / w, vh / h)));
+        var cover = Math.max(vw / w, vh / h);
+        var centeredPanX = Math.round((vw * 0.5 - w * cover * 0.5) * 1000) / 1000;
+        var centeredPanY = Math.round((vh * 0.5 - h * cover * 0.5) * 1000) / 1000;
+        fc.style.setProperty("--sky-cover", String(cover));
+        fc.style.setProperty("--sky-pan-x", centeredPanX + "px");
+        fc.style.setProperty("--sky-pan-y", centeredPanY + "px");
       })();
     </script>
     <div class="ambient-layer" aria-hidden="true"></div>
@@ -512,6 +525,6 @@
       <div class="lotor-detail__body"></div>
     </dialog>
 
-    <script src="main.js?v=site-9" defer></script>
+    <script src="main.js?v=site-16" defer></script>
   </body>
 </html>

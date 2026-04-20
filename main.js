@@ -392,6 +392,7 @@
 
     var cardGap = Math.max(12, Math.min(22, shortSide * 0.022));
     var introShift = portrait ? 0 : Math.max(0, Math.min(18, (Math.min(longSide, 1600) - 900) / 40));
+    var introShiftPx = Math.round(shellInlineMax * (introShift / 100));
     var introVista = portrait
       ? Math.max(96, Math.min(168, w * 0.12))
       : Math.max(152, Math.min(240, w * 0.14));
@@ -403,6 +404,9 @@
     var mapDensity = w <= 1024 || shortMapViewport ? "compact" : "regular";
     var introLayout = w <= 980 ? "single" : "split";
     var introDensity = w <= 760 ? "compact" : "regular";
+    var introMode = "overlay";
+    var contactMode = "overlay";
+    if (introMode !== "embedded") introShiftPx = 0;
     var capLabelMax = Math.max(168, Math.min(240, Math.round(shortSide * 0.34)));
     var capLabelMin = Math.max(122, Math.min(164, Math.round(shortSide * 0.2)));
     var narrowCapLabelMaxBlock = Math.max(172, Math.min(320, Math.round(Math.min(stageBlock * 0.42, shortSide * 0.34))));
@@ -422,7 +426,7 @@
     root.style.setProperty("--home-qual-label-w-px", qualLabelW + "px");
     root.style.setProperty("--home-qual-label-min-px", qualLabelMin + "px");
     root.style.setProperty("--home-qual-label-max-block", narrowQualLabelMaxBlock + "px");
-    root.style.setProperty("--intro-procyon-shift", round4(introShift) + "cqi");
+    root.style.setProperty("--intro-procyon-shift", round4(introShiftPx) + "px");
     root.style.setProperty("--intro-vista-w", Math.round(introVista) + "px");
     root.style.setProperty("--intro-col-gap", Math.round(introGap) + "px");
     root.setAttribute("data-home-box-mode", boxMode);
@@ -432,6 +436,8 @@
     root.setAttribute("data-home-box-band", narrowAnchored ? "narrow" : "regular");
     root.setAttribute("data-home-intro-layout", introLayout);
     root.setAttribute("data-home-intro-density", introDensity);
+    root.setAttribute("data-home-intro-mode", introMode);
+    root.setAttribute("data-home-contact-mode", contactMode);
     if (prevMapMode !== mapMode) {
       markHomeMapCalloutDirty("capabilities");
       markHomeMapCalloutDirty("quals");
@@ -551,6 +557,13 @@
 
   function coverScale() {
     return coverScaleFromLayout();
+  }
+
+  function roundToDevicePixel(x) {
+    var n = Number.isFinite(x) ? x : 0;
+    var dpr = window.devicePixelRatio || 1;
+    if (!(dpr > 0)) dpr = 1;
+    return Math.round(n * dpr) / dpr;
   }
 
   var fixedCelestial = document.getElementById("fixed-celestial");
@@ -923,18 +936,41 @@
   function populateHomeContactStackCards(cards) {
     if (!cards) return 0;
     cards.innerHTML = "";
+
+    function retargetCloneIds(root, suffix) {
+      if (!root || !suffix) return;
+      if (root.id) root.id += suffix;
+      var idNodes = root.querySelectorAll ? root.querySelectorAll("[id]") : [];
+      var i;
+      for (i = 0; i < idNodes.length; i++) {
+        idNodes[i].id += suffix;
+      }
+    }
+
     var head = document.querySelector('.home-fo[data-fo-scene="contact"] .contact-fo__head');
     if (head) {
       var headClone = head.cloneNode(true);
       headClone.classList.add("home-contact-stack__head");
+      retargetCloneIds(headClone, "-overlay");
       cards.appendChild(headClone);
     }
-    var sourceCards = document.querySelectorAll('.home-fo[data-fo-scene="contact"] .contact-card');
-    var i;
-    for (i = 0; i < sourceCards.length; i++) {
-      cards.appendChild(sourceCards[i].cloneNode(true));
+    var sourceGrid = document.querySelector('.home-fo[data-fo-scene="contact"] .const-deck__grid--contact.contact-team');
+    var cardCount = 0;
+    if (sourceGrid) {
+      var gridClone = sourceGrid.cloneNode(true);
+      gridClone.classList.add("home-contact-stack__grid");
+      retargetCloneIds(gridClone, "-overlay");
+      cards.appendChild(gridClone);
+      cardCount = gridClone.querySelectorAll(".contact-card").length;
     }
-    return sourceCards.length;
+    var footer = document.querySelector('.home-fo[data-fo-scene="contact"] .home-fo__footer');
+    if (footer) {
+      var footerClone = footer.cloneNode(true);
+      footerClone.classList.add("home-contact-stack__footer");
+      retargetCloneIds(footerClone, "-overlay");
+      cards.appendChild(footerClone);
+    }
+    return cardCount;
   }
 
   function ensureHomeContactStackDeck() {
@@ -964,6 +1000,45 @@
     return deck;
   }
 
+  function populateHomeIntroStack(cards) {
+    if (!cards) return 0;
+    cards.innerHTML = "";
+    var source = document.querySelector(".home-fo--intro");
+    if (!source) return 0;
+    var clone = source.cloneNode(true);
+    clone.classList.add("home-intro-stack__content");
+    clone.removeAttribute("data-fo-scene");
+    var heading = clone.querySelector("#intro-heading");
+    if (heading) heading.id = "intro-heading-mobile";
+    cards.appendChild(clone);
+    return 1;
+  }
+
+  function ensureHomeIntroStackDeck() {
+    if (!lotorHome) return null;
+    var layer = ensureHomeFixedStackLayer();
+    if (!layer) return null;
+    var existing = layer.querySelector('.home-intro-stack[data-mobile-scene="intro"]');
+    if (existing) {
+      var existingCards = existing.querySelector(".home-intro-stack__cards");
+      if (existingCards) populateHomeIntroStack(existingCards);
+      return existing;
+    }
+    var deck = document.createElement("div");
+    deck.className = "home-mobile-stack home-intro-stack";
+    deck.setAttribute("data-mobile-scene", "intro");
+    deck.setAttribute("role", "region");
+    deck.setAttribute("aria-label", "Intro");
+    deck.hidden = true;
+    deck.setAttribute("aria-hidden", "true");
+    var cards = document.createElement("div");
+    cards.className = "home-intro-stack__cards";
+    populateHomeIntroStack(cards);
+    deck.appendChild(cards);
+    layer.appendChild(deck);
+    return deck;
+  }
+
   function ensureHomeFixedStackLayer() {
     if (!lotorHome || !document.body) return null;
     if (homeFixedStackLayer && homeFixedStackLayer.isConnected) return homeFixedStackLayer;
@@ -988,11 +1063,15 @@
     var root = document.documentElement;
     var mapMode = root.getAttribute("data-home-map-mode") || "anchored";
     var boxMode = root.getAttribute("data-home-box-mode") || "anchored";
+    var introMode = root.getAttribute("data-home-intro-mode") || "embedded";
+    var contactMode = root.getAttribute("data-home-contact-mode") || "embedded";
     var showScene = "";
     if (!detailOpen) {
-      if ((activeSceneId === "capabilities" || activeSceneId === "quals") && mapMode === "stacked") {
+      if (activeSceneId === "intro" && introMode !== "embedded") {
+        showScene = "intro";
+      } else if ((activeSceneId === "capabilities" || activeSceneId === "quals") && mapMode === "stacked") {
         showScene = activeSceneId;
-      } else if (activeSceneId === "contact" && boxMode === "stacked") {
+      } else if (activeSceneId === "contact" && (contactMode !== "embedded" || boxMode === "stacked")) {
         showScene = "contact";
       }
     }
@@ -1009,6 +1088,7 @@
   }
 
   function ensureHomeMobileStackDecks() {
+    ensureHomeIntroStackDeck();
     ensureHomeMobileStackDeck("capabilities");
     ensureHomeMobileStackDeck("quals");
     ensureHomeContactStackDeck();
@@ -1053,17 +1133,6 @@
     return {
       x: ((cx - metrics.rect.left) / metrics.rect.width) * metrics.w,
       y: ((cy - metrics.rect.top) / metrics.rect.height) * metrics.h,
-    };
-  }
-
-  function clientDeltaToElementLocal(el, dx, dy, metrics) {
-    var outX = Number.isFinite(dx) ? dx : 0;
-    var outY = Number.isFinite(dy) ? dy : 0;
-    metrics = metrics || elementLocalMetrics(el);
-    if (!metrics) return { x: outX, y: outY };
-    return {
-      x: outX * (metrics.w / metrics.rect.width),
-      y: outY * (metrics.h / metrics.rect.height),
     };
   }
 
@@ -1431,10 +1500,12 @@
     root.style.setProperty("--home-contact-shift-y", "0px");
 
     var introLayout = root.getAttribute("data-home-intro-layout") || "split";
+    var introMode = root.getAttribute("data-home-intro-mode") || "embedded";
+    var contactMode = root.getAttribute("data-home-contact-mode") || "embedded";
     var introFocus = LOTOR_HOME_MAP_TUNING.introProcyon;
     var introFocusClient = introFocus ? skyMapPointToClient(introFocus.x, introFocus.y) : null;
 
-    var introPanel = document.querySelector(".home-fo--intro .home-fo__panel--hero");
+    var introPanel = introMode !== "embedded" ? null : document.querySelector(".home-fo--intro .home-fo__panel--hero");
     if (introPanel) {
       var introRect = introPanel.getBoundingClientRect();
       if (introRect.width > 2) {
@@ -1453,14 +1524,13 @@
           safeCy - introCy,
           safe
         );
-        var introFo = introPanel.closest(".home-fo--intro") || introPanel;
-        var introLocalShift = clientDeltaToElementLocal(introFo, introShift.x, introShift.y);
-        root.style.setProperty("--home-intro-shift-x", round4(introLocalShift.x) + "px");
-        root.style.setProperty("--home-intro-shift-y", round4(introLocalShift.y) + "px");
+        root.style.setProperty("--home-intro-shift-x", round4(introShift.x) + "px");
+        root.style.setProperty("--home-intro-shift-y", round4(introShift.y) + "px");
       }
     }
 
-    var contactPanel = document.querySelector('.home-fo[data-fo-scene="contact"] .home-fo__panel');
+    var contactPanel =
+      contactMode !== "embedded" ? null : document.querySelector('.home-fo[data-fo-scene="contact"] .home-fo__panel');
     if (contactPanel) {
       var contactRect = contactPanel.getBoundingClientRect();
       if (contactRect.width > 2 && contactRect.height > 2) {
@@ -1478,10 +1548,8 @@
           safeCy - contactCy,
           safe
         );
-        var contactFo = contactPanel.closest('.home-fo[data-fo-scene="contact"]') || contactPanel.closest(".home-fo") || contactPanel;
-        var contactLocalShift = clientDeltaToElementLocal(contactFo, contactShift.x, contactShift.y);
-        root.style.setProperty("--home-contact-shift-x", round4(contactLocalShift.x) + "px");
-        root.style.setProperty("--home-contact-shift-y", round4(contactLocalShift.y) + "px");
+        root.style.setProperty("--home-contact-shift-x", round4(contactShift.x) + "px");
+        root.style.setProperty("--home-contact-shift-y", round4(contactShift.y) + "px");
       }
     }
   }
@@ -2741,10 +2809,14 @@
     nx = panClamped.nx;
     ny = panClamped.ny;
     var z = panClamped.zoom;
+    var panX = roundToDevicePixel((layPan.w || 0) * 0.5 - z * nx * W);
+    var panY = roundToDevicePixel((layPan.h || 0) * 0.5 - z * ny * H);
     fixedCelestial.style.setProperty("--sky-cover", String(round4(C)));
     fixedCelestial.style.setProperty("--sky-nx", String(round4(nx)));
     fixedCelestial.style.setProperty("--sky-ny", String(round4(ny)));
     fixedCelestial.style.setProperty("--sky-zoom-mult", String(round4(z)));
+    fixedCelestial.style.setProperty("--sky-pan-x", round4(panX) + "px");
+    fixedCelestial.style.setProperty("--sky-pan-y", round4(panY) + "px");
     var zSpan = Math.max(ZOOM_MAX - 1, 0.05);
     var veil = 1 - 0.5 * Math.min(1, Math.max(0, (z - 1) / zSpan));
     document.documentElement.style.setProperty("--sky-veil", String(round4(veil)));
@@ -2810,6 +2882,8 @@
   var prefetched = Object.create(null);
   var historySceneTimer;
   var scrollScheduled;
+  var HOME_SCENE_ENTRY_LAYOUT_DELAYS = [0, 120, 280];
+  var HOME_VIEWPORT_SETTLE_LAYOUT_DELAYS = [0, 180, 420, 900];
   /** Require this many consecutive rAF polls with the same dominant scene before setScene (reduces boundary flicker). */
   var dominantSceneHoldCandidate = null;
   var dominantSceneHoldCount = 0;
@@ -2865,6 +2939,9 @@
     fixedCelestial.style.setProperty("--sky-parallax-x", "0px");
     fixedCelestial.style.setProperty("--sky-parallax-y", "0px");
     if (!lotorHome || detailOpen || reduceMotion) return;
+    if (programmaticScrollSceneId && document.documentElement.getAttribute("data-sky-transform-ease") === "1") {
+      return;
+    }
     applySkyForScene(activeSceneId);
   }
 
@@ -2887,6 +2964,12 @@
   function setScene(id, opts) {
     opts = opts || {};
     if (!document.querySelector('.lotor-scene[data-scene="' + id + '"]')) return;
+    var sceneAlreadyActive =
+      activeSceneId === id && document.documentElement.getAttribute("data-home-scene") === id;
+    if (sceneAlreadyActive && !opts.force) {
+      setActiveNav(id);
+      return;
+    }
     cancelHomeActiveSceneLayoutSyncs();
     activeSceneId = id;
     sceneSections.forEach(function (sec) {
@@ -2900,7 +2983,7 @@
     syncHomeFixedStackLayer();
     if (!detailOpen) {
       beginSkyTransformEase();
-      scheduleActiveHomeSceneLayoutSync(id, [0, 180, 420, 900]);
+      scheduleActiveHomeSceneLayoutSync(id, HOME_SCENE_ENTRY_LAYOUT_DELAYS);
     }
     setActiveNav(id);
   }
@@ -3408,7 +3491,7 @@
     syncHomeMapOverlay(activeSceneId);
     syncHomeQualsStrip();
     syncHomeFixedStackLayer();
-    if (lotorHome) scheduleActiveHomeSceneLayoutSync(activeSceneId, [0, 180, 420, 900]);
+    if (lotorHome) scheduleActiveHomeSceneLayoutSync(activeSceneId, HOME_SCENE_ENTRY_LAYOUT_DELAYS);
     if (lastFocusBeforeDetail && typeof lastFocusBeforeDetail.focus === "function") {
       try {
         lastFocusBeforeDetail.focus();
@@ -3567,7 +3650,7 @@
         cancelHomeActiveSceneLayoutSyncs();
         beginSkyTransformEase();
         if (detailOpen) applySkyDetail(detailPathOpen);
-        else scheduleActiveHomeSceneLayoutSync(activeSceneId, [0, 180, 420, 900]);
+        else scheduleActiveHomeSceneLayoutSync(activeSceneId, HOME_VIEWPORT_SETTLE_LAYOUT_DELAYS);
         updateAmbientScrollFraction();
         updateChromeScrollDerived();
         scheduleDominantSceneCheck();
@@ -3584,12 +3667,12 @@
     window.addEventListener("load", function () {
       syncHomeLayoutViewport();
       if (detailOpen) applySkyDetail(detailPathOpen);
-      else scheduleActiveHomeSceneLayoutSync(activeSceneId, [0, 180, 420, 900]);
+      else scheduleActiveHomeSceneLayoutSync(activeSceneId, HOME_VIEWPORT_SETTLE_LAYOUT_DELAYS);
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(function () {
-          if (!detailOpen) scheduleActiveHomeSceneLayoutSync(activeSceneId, [0, 180]);
+          if (!detailOpen) scheduleActiveHomeSceneLayoutSync(activeSceneId, HOME_SCENE_ENTRY_LAYOUT_DELAYS);
         }).catch(function () {
-          if (!detailOpen) scheduleActiveHomeSceneLayoutSync(activeSceneId, [0, 180]);
+          if (!detailOpen) scheduleActiveHomeSceneLayoutSync(activeSceneId, HOME_SCENE_ENTRY_LAYOUT_DELAYS);
         });
       }
     });

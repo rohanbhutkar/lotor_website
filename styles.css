@@ -66,9 +66,10 @@
   --mobile-shell-pad: clamp(0.75rem, 4vw, 1.1rem);
   --mobile-header-pad-x: clamp(0.9rem, 4.5vw, 1.4rem);
   --mobile-header-gap: clamp(0.7rem, 3vw, 1rem);
-  --intro-procyon-shift: 12cqi;
+  --intro-procyon-shift: 0px;
   --intro-vista-w: clamp(9.5rem, 15vw, 14rem);
   --intro-col-gap: clamp(1.5rem, 3.5vw, 3.25rem);
+  --home-ui-inv-scale: 1;
   --home-center-lift-y: 0px;
   --home-intro-shift-x: 0px;
   --home-intro-shift-y: 0px;
@@ -131,6 +132,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+html.lotor-home {
+  --home-ui-inv-scale: max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1))));
 }
 
 html[data-access-state="locked"],
@@ -333,6 +338,8 @@ html[data-access-state="locked"] body > .access-gate * {
   --sky-nx: 0.5;
   --sky-ny: 0.5;
   --sky-zoom-mult: 1;
+  --sky-pan-x: 0px;
+  --sky-pan-y: 0px;
   --sky-parallax-x: 0px;
   --sky-parallax-y: 0px;
 }
@@ -367,15 +374,8 @@ html[data-access-state="locked"] body > .access-gate * {
   top: 0;
   width: calc(var(--sky-map-w, 1489px) * var(--sky-cover));
   height: calc(var(--sky-map-h, 1190px) * var(--sky-cover));
-  /* Zoom pivot is the true layout viewport center; the header does not participate in focal centering. */
-  /* Pivot uses --sky-layout-* (set in main.js to match layoutViewportDimensions); 50vw/100vh alone diverge on mobile vs innerHeight */
-  transform: translate3d(calc(var(--sky-layout-w, 100vw) * 0.5), calc(var(--sky-layout-h, 100vh) * 0.5), 0)
-    scale(var(--sky-zoom-mult))
-    translate3d(
-      calc(-1 * var(--sky-nx) * var(--sky-map-w, 1489px) * var(--sky-cover)),
-      calc(-1 * var(--sky-ny) * var(--sky-map-h, 1190px) * var(--sky-cover)),
-      0
-    );
+  transform: translate3d(var(--sky-pan-x, 0px), var(--sky-pan-y, 0px), 0)
+    scale(var(--sky-zoom-mult));
   transform-origin: 0 0;
   will-change: transform;
   backface-visibility: hidden;
@@ -646,6 +646,12 @@ html.lotor-home .home-fo__panel {
   box-shadow: none;
 }
 
+html.lotor-home .home-fo__shift-shell,
+html.lotor-home .home-fo__scale-shell {
+  width: 100%;
+  max-width: 100%;
+}
+
 /* Capabilities / quals / contact: center block in foreignObject; inverse zoom keeps type readable */
 html.lotor-home .home-fo:not(.home-fo--intro) {
   display: flex;
@@ -666,19 +672,14 @@ html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__panel {
   max-width: min(100%, var(--home-panel-inline-max));
 }
 
-@supports (zoom: 1) {
-  html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__panel {
-    zoom: max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1))));
-  }
-  /*
-   * Contact title + lede: panel inverse-zoom softens type; nested zoom = 1/P so compound ≈ 1× for sharper copy.
-   * P matches .home-fo__panel above.
-   */
-  html.lotor-home .home-fo[data-fo-scene="contact"] .contact-fo__head {
-    zoom: calc(
-      1 / max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1))))
-    );
-  }
+html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__shift-shell {
+  transform: translate3d(var(--home-contact-shift-x, 0px), var(--home-contact-shift-y, 0px), 0);
+  transform-origin: top center;
+}
+
+html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__scale-shell {
+  transform: scale(var(--home-ui-inv-scale, 1));
+  transform-origin: top center;
 }
 
 html.lotor-home .home-map-const-labels .home-map-const-label {
@@ -698,18 +699,6 @@ html.lotor-home .home-map-const-labels .home-map-const-label.const-label--right 
 }
 
 @supports not (zoom: 1) {
-  html.lotor-home .home-fo:not(.home-fo--intro) .home-fo__panel {
-    transform: scale(max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))));
-    transform-origin: top center;
-  }
-
-  html.lotor-home .home-fo[data-fo-scene="contact"] .contact-fo__head {
-    transform: scale(
-      calc(1 / max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))))
-    );
-    transform-origin: top center;
-  }
-
   html.lotor-home .home-map-const-labels .home-map-const-label.const-label--left {
     transform: translate(0, -50%)
       scale(max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))));
@@ -756,8 +745,6 @@ html.lotor-home .home-fo--intro {
 
 html.lotor-home .home-fo--intro .home-fo__panel--hero {
   position: relative;
-  left: var(--home-intro-shift-x, 0px);
-  top: var(--home-intro-shift-y, 0px);
   width: 100%;
   max-width: min(var(--home-shell-inline-max), 100%);
   max-height: none;
@@ -775,17 +762,13 @@ html.lotor-home .home-fo--intro .home-fo__panel--hero {
   padding-inline: clamp(0.85rem, 2vmin, 1.35rem);
 }
 
-@supports (zoom: 1) {
-  html.lotor-home .home-fo--intro .home-fo__panel--hero {
-    zoom: max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1))));
-    transform: none;
-  }
+html.lotor-home .home-fo--intro .home-fo__shift-shell {
+  transform: translate3d(var(--home-intro-shift-x, 0px), var(--home-intro-shift-y, 0px), 0);
 }
 
-@supports not (zoom: 1) {
-  html.lotor-home .home-fo--intro .home-fo__panel--hero {
-    transform: scale(max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1)))));
-  }
+html.lotor-home .home-fo--intro .home-fo__scale-shell {
+  transform: scale(var(--home-ui-inv-scale, 1));
+  transform-origin: center center;
 }
 
 html.lotor-home .home-fo__panel--hero {
@@ -807,18 +790,9 @@ html.lotor-home .home-fo--intro .intro-hero {
   overflow: visible;
 }
 
-@supports (width: 1cqi) {
-  html.lotor-home .home-fo--intro .intro-hero,
-  html.lotor-home .home-fo--intro .home-fo__panel--hero > .hero-cta--below-start {
-    transform: translateX(var(--intro-procyon-shift));
-  }
-}
-
-@supports not (width: 1cqi) {
-  html.lotor-home .home-fo--intro .intro-hero,
-  html.lotor-home .home-fo--intro .home-fo__panel--hero > .hero-cta--below-start {
-    transform: translateX(min(18vw, 15rem));
-  }
+html.lotor-home .home-fo--intro .intro-hero,
+html.lotor-home .home-fo--intro .home-fo__panel--hero > .hero-cta--below-start {
+  transform: translateX(var(--intro-procyon-shift));
 }
 
 html.lotor-home .home-fo--intro .intro-hero__vista {
@@ -1085,8 +1059,6 @@ html.lotor-home .home-fo__panel--contact {
 
 html.lotor-home .home-fo[data-fo-scene="contact"] .home-fo__panel {
   position: relative;
-  left: var(--home-contact-shift-x, 0px);
-  top: var(--home-contact-shift-y, 0px);
 }
 
 html.lotor-home .home-fo__footer {
@@ -3295,7 +3267,7 @@ html.lotor-home .ambient-layer {
    * and smears zoom/pan; parallax must stay instant.
    */
   html.lotor-home.lotor-sky-ready[data-sky-transform-ease="1"] .fixed-celestial > .celestial-mover {
-    transition: none;
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   html.lotor-sky-pulse .fixed-celestial > .celestial-mover .sky-unified > image {
@@ -3863,8 +3835,155 @@ html.lotor-home[data-home-map-mode="stacked"] .home-map-label-layer {
   display: none;
 }
 
-html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack,
-html.lotor-home[data-home-map-mode="stacked"] .home-mobile-stack {
+html.lotor-home[data-home-intro-mode="overlay"] .home-fo[data-fo-scene="intro"] {
+  display: none;
+}
+
+html.lotor-home[data-home-intro-mode="overlay"] .home-intro-stack {
+  position: relative;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex: 1 1 100%;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  margin-block: 0;
+  align-items: stretch;
+  justify-content: center;
+  padding: clamp(0.85rem, 4vw, 1.2rem);
+  box-sizing: border-box;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+html.lotor-home[data-home-intro-mode="overlay"] .home-intro-stack__cards {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, var(--home-shell-inline-max));
+  margin-inline: auto;
+  min-height: 0;
+  max-height: calc(var(--home-stage-h) - clamp(1.4rem, 6vw, 2.4rem));
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+html.lotor-home[data-home-intro-mode="overlay"] .home-intro-stack__content.home-fo--intro {
+  width: min(100%, var(--home-shell-inline-max));
+  min-height: 100%;
+  padding-block: clamp(1rem, 4.5svh, 2rem);
+  padding-inline: clamp(0.6rem, 4vw, 1rem);
+  justify-content: center;
+  overflow: visible;
+}
+
+html.lotor-home[data-home-intro-mode="overlay"] .home-intro-stack .home-fo__panel--hero {
+  width: 100%;
+  max-width: min(100%, var(--home-shell-inline-max));
+  margin-inline: auto;
+  left: auto;
+  top: auto;
+}
+
+html.lotor-home[data-home-intro-mode="overlay"] .home-intro-stack .home-fo__shift-shell,
+html.lotor-home[data-home-intro-mode="overlay"] .home-intro-stack .home-fo__scale-shell {
+  transform: none !important;
+}
+
+html.lotor-home[data-home-intro-mode="overlay"] .home-intro-stack .intro-hero,
+html.lotor-home[data-home-intro-mode="overlay"] .home-intro-stack .hero-cta--below-start {
+  transform: none !important;
+}
+
+html.lotor-home[data-home-contact-mode="overlay"] .home-fo[data-fo-scene="contact"] {
+  display: none;
+}
+
+html.lotor-home[data-home-contact-mode="overlay"] .home-contact-stack {
+  position: relative;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex: 1 1 100%;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  margin-block: 0;
+  align-items: stretch;
+  justify-content: center;
+  padding: clamp(0.85rem, 4vw, 1.2rem);
+  box-sizing: border-box;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+html.lotor-home[data-home-contact-mode="overlay"] .home-contact-stack__cards {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: clamp(0.9rem, 3vw, 1.2rem);
+  width: min(100%, var(--home-panel-inline-max));
+  max-width: min(44rem, var(--home-panel-inline-max));
+  margin-inline: auto;
+  min-height: 0;
+  max-height: calc(var(--home-stage-h) - clamp(1.8rem, 7vw, 2.6rem));
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: clamp(0.95rem, 4vw, 1.2rem);
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: calc(var(--radius) + 6px);
+  background:
+    linear-gradient(180deg, rgba(10, 12, 20, 0.72) 0%, rgba(10, 12, 20, 0.88) 100%),
+    rgba(7, 9, 16, 0.82);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+  pointer-events: auto;
+}
+
+html.lotor-home[data-home-contact-mode="overlay"] .home-contact-stack__head {
+  width: min(100%, 32rem);
+  margin-inline: auto;
+  text-align: center;
+}
+
+html.lotor-home[data-home-contact-mode="overlay"] .home-contact-stack__grid {
+  width: 100%;
+  margin: 0;
+}
+
+html.lotor-home[data-home-contact-mode="overlay"] .home-contact-stack__grid.const-deck__grid--contact.contact-team {
+  gap: clamp(0.85rem, 2.6vw, 1.15rem);
+}
+
+html.lotor-home[data-home-contact-mode="overlay"] .home-contact-stack__grid .contact-card {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+}
+
+html.lotor-home[data-home-contact-mode="overlay"] .home-contact-stack__grid .contact-card__email {
+  width: 100%;
+  justify-content: center;
+}
+
+html.lotor-home[data-home-contact-mode="overlay"] .home-contact-stack__footer {
+  width: 100%;
+  margin-top: auto;
+  padding-top: clamp(0.2rem, 1.2vw, 0.5rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html.lotor-home[data-home-box-mode="stacked"] .home-mobile-stack:not(.home-intro-stack),
+html.lotor-home[data-home-map-mode="stacked"] .home-mobile-stack:not(.home-intro-stack) {
   position: relative;
   top: 0;
   z-index: 2;
