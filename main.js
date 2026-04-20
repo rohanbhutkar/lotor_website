@@ -841,9 +841,12 @@
     if (!deck || !isHomeMapCalloutScene(sceneId)) return 0;
     var container = deck.querySelector('.home-map-const-labels[data-fo-labels="' + sceneId + '"]');
     if (!container) return 0;
-    container.innerHTML = "";
     var source = homeMapSourceLabelContainer(sceneId);
     var kids = source ? source.querySelectorAll(".home-map-const-label") : [];
+    var sourceCount = kids.length;
+    var renderedCount = parseInt(container.getAttribute("data-source-count") || "-1", 10);
+    if (container.children.length && renderedCount === sourceCount) return sourceCount;
+    container.innerHTML = "";
     var i;
     for (i = 0; i < kids.length; i++) {
       var clone = kids[i].cloneNode(true);
@@ -854,6 +857,7 @@
       }
       container.appendChild(clone);
     }
+    container.setAttribute("data-source-count", String(sourceCount));
     return kids.length;
   }
 
@@ -1047,6 +1051,9 @@
     if (!cards) return 0;
     var source = homeMapSourceLabelContainer(sceneId);
     var kids = source ? source.querySelectorAll(".home-map-const-label") : [];
+    var sourceCount = kids.length;
+    var renderedCount = parseInt(cards.getAttribute("data-source-count") || "-1", 10);
+    if (cards.children.length && renderedCount === sourceCount) return sourceCount;
     var i;
     cards.innerHTML = "";
     var head = buildHomeMobileStackHead(sceneId);
@@ -1061,8 +1068,10 @@
         var fallbackCard = buildHomeMobileCard(fallback[i]);
         if (fallbackCard) cards.appendChild(fallbackCard);
       }
+      cards.setAttribute("data-source-count", String(sourceCount));
       return fallback.length;
     }
+    cards.setAttribute("data-source-count", String(sourceCount));
     return kids.length;
   }
 
@@ -1096,7 +1105,6 @@
 
   function populateHomeContactStackCards(cards) {
     if (!cards) return 0;
-    cards.innerHTML = "";
 
     function retargetCloneIds(root, suffix) {
       if (!root || !suffix) return;
@@ -1109,13 +1117,17 @@
     }
 
     var head = document.querySelector('.home-fo[data-fo-scene="contact"] .contact-fo__head');
+    var sourceGrid = document.querySelector('.home-fo[data-fo-scene="contact"] .const-deck__grid--contact.contact-team');
+    var sourceCount = sourceGrid ? sourceGrid.querySelectorAll(".contact-card").length : 0;
+    var renderedCount = parseInt(cards.getAttribute("data-source-count") || "-1", 10);
+    if (cards.children.length && renderedCount === sourceCount) return sourceCount;
+    cards.innerHTML = "";
     if (head) {
       var headClone = head.cloneNode(true);
       headClone.classList.add("home-contact-stack__head");
       retargetCloneIds(headClone, "-overlay");
       cards.appendChild(headClone);
     }
-    var sourceGrid = document.querySelector('.home-fo[data-fo-scene="contact"] .const-deck__grid--contact.contact-team');
     var cardCount = 0;
     if (sourceGrid) {
       var gridClone = sourceGrid.cloneNode(true);
@@ -1131,6 +1143,7 @@
       retargetCloneIds(footerClone, "-overlay");
       cards.appendChild(footerClone);
     }
+    cards.setAttribute("data-source-count", String(sourceCount));
     return cardCount;
   }
 
@@ -1163,6 +1176,7 @@
 
   function populateHomeIntroStack(cards) {
     if (!cards) return 0;
+    if (cards.children.length) return 1;
     cards.innerHTML = "";
     var source = document.querySelector(".home-fo--intro");
     if (!source) return 0;
@@ -2659,16 +2673,16 @@
     sceneId = sceneId || activeSceneId;
     if (!lotorHome || detailOpen || activeSceneId !== sceneId) return false;
 
-    syncHomeLayoutViewport();
+    syncHomeLayoutViewport({ skipFixedLayers: true });
     syncHomeMapViewportCss();
     syncHomeMapOverlay(sceneId);
-    syncHomeFixedMapLabelLayer(sceneId);
 
     if (sceneId === "capabilities" || sceneId === "quals") {
       ensureHomeMobileStackDeck(sceneId);
     } else if (sceneId === "contact") {
       ensureHomeContactStackDeck();
     }
+    syncHomeFixedStackLayer();
 
     if (isHomeMapCalloutScene(sceneId) && canLayoutHomeMapCalloutScene(sceneId)) {
       var f = focalNormals(sceneId);
@@ -2685,6 +2699,7 @@
       return true;
     }
 
+    syncHomeFixedMapLabelLayer(sceneId);
     applySkyForScene(sceneId);
     syncViewportFocusedHomePanels(captureHomeBoxLayoutSnapshot());
     return true;
@@ -2694,7 +2709,10 @@
     sceneId = sceneId || activeSceneId;
     if (!lotorHome || detailOpen || !sceneId) return;
     cancelHomeActiveSceneLayoutSyncs();
-    var runs = delays && delays.length ? delays : [0, 160, 360];
+    var runs = delays && delays.length ? delays.slice() : [0, 160, 360];
+    if (!isHomeMapCalloutScene(sceneId) && runs.length > 2) {
+      runs = runs.slice(0, 2);
+    }
     var i;
     for (i = 0; i < runs.length; i++) {
       (function (delayMs) {
@@ -2739,7 +2757,7 @@
     }
     homeMapCalloutPrecomputePending = true;
     var dirtyVersion = homeMapCalloutDirtyVersion[sceneId];
-    syncHomeLayoutViewport();
+    syncHomeLayoutViewport({ skipFixedLayers: true });
     syncHomeMapViewportCss();
     syncHomeMapOverlay(sceneId);
     var layoutSnapshot = captureHomeBoxLayoutSnapshot();
@@ -2829,7 +2847,7 @@
       homePrecomputeSafetyTimer = null;
       forceReleaseHomeSkyPrecompute();
     }, 5000);
-    syncHomeLayoutViewport();
+    syncHomeLayoutViewport({ skipFixedLayers: true });
     syncHomeMapViewportCss();
     var layoutSnapshot = captureHomeBoxLayoutSnapshot();
     var scenes = ["capabilities", "quals"];
@@ -3086,6 +3104,9 @@
   var lastFocusBeforeDetail = null;
   var baseDocumentTitle = document.title;
   var prefetched = Object.create(null);
+  var detailHtmlCache = Object.create(null);
+  var detailPayloadCache = Object.create(null);
+  var detailPayloadPending = Object.create(null);
   var historySceneTimer;
   var scrollScheduled;
   var HOME_SCENE_ENTRY_LAYOUT_DELAYS = [0, 120, 280];
@@ -3095,6 +3116,7 @@
   var dominantSceneHoldCount = 0;
   var DOMINANT_SCENE_HOLD_FRAMES = 2;
   var detailFetchAbort;
+  var detailRequestToken = 0;
   var skyTransformEaseTimer;
   /** While set, scroll-spy must not call setScene() for a different section (smooth scroll vs geometry). */
   var programmaticScrollSceneId = null;
@@ -3339,7 +3361,7 @@
       if (programmaticScrollSceneId && d === programmaticScrollSceneId && activeSceneId === programmaticScrollSceneId) {
         clearProgrammaticScrollLock();
       }
-      scheduleHistoryScene(dominantSceneId());
+      scheduleHistoryScene(d);
     });
   }
 
@@ -3349,6 +3371,102 @@
 
   function isCapabilityDetailHref(href) {
     return /^capabilities\/[^/]+\.html$/i.test((href || "").replace(/^\.\//, ""));
+  }
+
+  function isHomeDetailHref(href) {
+    return isCapabilityDetailHref(href) || isQualPageHref(href);
+  }
+
+  function normalizeDetailPath(relPath) {
+    return String(relPath || "").replace(/^\.\//, "");
+  }
+
+  function prefetchDetailHref(relPath) {
+    relPath = normalizeDetailPath(relPath);
+    if (!isHomeDetailHref(relPath) || prefetched[relPath]) return;
+    prefetched[relPath] = true;
+    var link = document.createElement("link");
+    link.rel = "prefetch";
+    link.href = relPath;
+    document.head.appendChild(link);
+  }
+
+  function prepareDetailPayload(relPath, html) {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, "text/html");
+    var mainEl = doc.querySelector("#main");
+    if (!mainEl) throw new Error("no main");
+    var block =
+      mainEl.querySelector(".qual-page__wrap") || mainEl.querySelector(".panel__inner--deck");
+    if (!block) throw new Error("no content block");
+    var titleText = "";
+    var h1 = doc.querySelector("h1");
+    if (h1) titleText = h1.textContent.trim();
+    if (!titleText) {
+      var t = doc.querySelector("title");
+      if (t) titleText = t.textContent.replace(/\s*—\s*lotor lab\s*$/i, "").trim();
+    }
+    var clone = block.cloneNode(true);
+    var backNav = clone.querySelector(".page-back-nav");
+    if (backNav) backNav.remove();
+    var shell = document.createElement("div");
+    shell.appendChild(clone);
+    rewriteFragmentRoots(shell);
+    return {
+      titleText: titleText || relPath,
+      bodyHtml: shell.innerHTML,
+    };
+  }
+
+  function fetchDetailHtml(relPath, signal) {
+    relPath = normalizeDetailPath(relPath);
+    if (detailHtmlCache[relPath]) return Promise.resolve(detailHtmlCache[relPath]);
+    return fetch(relPath, {
+      credentials: "same-origin",
+      cache: "force-cache",
+      signal: signal,
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error(String(r.status));
+        return r.text();
+      })
+      .then(function (html) {
+        detailHtmlCache[relPath] = html;
+        return html;
+      });
+  }
+
+  function getDetailPayload(relPath, opts) {
+    opts = opts || {};
+    relPath = normalizeDetailPath(relPath);
+    if (detailPayloadCache[relPath]) return Promise.resolve(detailPayloadCache[relPath]);
+    if (detailPayloadPending[relPath]) return detailPayloadPending[relPath];
+    var pending = fetchDetailHtml(relPath, opts.signal)
+      .then(function (html) {
+        var payload = prepareDetailPayload(relPath, html);
+        detailPayloadCache[relPath] = payload;
+        return payload;
+      });
+    pending = pending.then(
+      function (payload) {
+        delete detailPayloadPending[relPath];
+        return payload;
+      },
+      function (err) {
+        delete detailPayloadPending[relPath];
+        throw err;
+      }
+    );
+    detailPayloadPending[relPath] = pending;
+    return pending;
+  }
+
+  function warmSceneLinkHref(relPath) {
+    relPath = normalizeDetailPath(relPath);
+    if (!isHomeDetailHref(relPath)) return;
+    prefetchDetailHref(relPath);
+    if (!isCapabilityDetailHref(relPath)) return;
+    getDetailPayload(relPath).catch(function () {});
   }
 
   function redirectQualPageFromHash(path) {
@@ -3564,6 +3682,7 @@
 
   function openDetail(relPath, opts) {
     opts = opts || {};
+    relPath = normalizeDetailPath(relPath);
     if (isQualPageHref(relPath)) {
       try {
         location.href = relPath;
@@ -3577,6 +3696,7 @@
       } catch (e) {}
     }
     detailFetchAbort = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var requestToken = ++detailRequestToken;
     detailOpen = true;
     detailPathOpen = relPath;
     applySkyDetail(relPath);
@@ -3597,39 +3717,17 @@
       } catch (e) {}
     }
 
-    fetch(relPath, {
-      credentials: "same-origin",
+    getDetailPayload(relPath, {
       signal: detailFetchAbort ? detailFetchAbort.signal : undefined,
     })
-      .then(function (r) {
-        if (!r.ok) throw new Error(String(r.status));
-        return r.text();
-      })
-      .then(function (html) {
-        var parser = new DOMParser();
-        var doc = parser.parseFromString(html, "text/html");
-        var mainEl = doc.querySelector("#main");
-        if (!mainEl) throw new Error("no main");
-        var block =
-          mainEl.querySelector(".qual-page__wrap") || mainEl.querySelector(".panel__inner--deck");
-        if (!block) throw new Error("no content block");
-        var titleText = "";
-        var h1 = doc.querySelector("h1");
-        if (h1) titleText = h1.textContent.trim();
-        if (!titleText) {
-          var t = doc.querySelector("title");
-          if (t) titleText = t.textContent.replace(/\s*—\s*lotor lab\s*$/i, "").trim();
-        }
-        if (detailTitleEl) detailTitleEl.textContent = titleText || relPath;
-        document.title = (titleText || relPath) + " — lotor lab";
+      .then(function (payload) {
+        if (requestToken !== detailRequestToken || !detailOpen || detailPathOpen !== relPath) return;
+        if (detailTitleEl) detailTitleEl.textContent = payload.titleText || relPath;
+        document.title = (payload.titleText || relPath) + " — lotor lab";
 
-        var clone = block.cloneNode(true);
-        var backNav = clone.querySelector(".page-back-nav");
-        if (backNav) backNav.remove();
-        rewriteFragmentRoots(clone);
-        detailBodyEl.innerHTML = "";
-        detailBodyEl.appendChild(clone);
-        bindQualSheetResizeObserve(clone);
+        detailBodyEl.innerHTML = payload.bodyHtml;
+        var insertedRoot = detailBodyEl.firstElementChild || detailBodyEl;
+        bindQualSheetResizeObserve(insertedRoot);
         buildQualSheetCapGrid();
         scheduleQualSheetFit();
         requestAnimationFrame(scheduleQualSheetFit);
@@ -3653,6 +3751,7 @@
         else reveal();
       })
       .catch(function (err) {
+        if (requestToken !== detailRequestToken) return;
         if (err && err.name === "AbortError") return;
         if (detailLoadingEl) {
           detailLoadingEl.hidden = false;
@@ -3687,6 +3786,7 @@
       } catch (e) {}
       detailFetchAbort = null;
     }
+    detailRequestToken++;
     if (detailDialog && detailDialog.open) {
       try {
         detailDialog.close();
@@ -3722,8 +3822,9 @@
     return { kind: "scene", id: "intro" };
   }
 
-  function syncHomeLayoutViewport() {
+  function syncHomeLayoutViewport(opts) {
     if (!document.documentElement.classList.contains("lotor-home")) return;
+    opts = opts || {};
     var lay = layoutViewportDimensions();
     var hdr = document.querySelector(".site-header");
     var h = hdr ? hdr.getBoundingClientRect().height : 0;
@@ -3737,8 +3838,10 @@
       headerHeight: h >= 40 && h <= 220 ? h : headerHeightForSky(),
       headerBottom: hb >= 0 ? hb : 0,
     });
-    syncHomeFixedStackLayer();
-    syncHomeFixedMapLabelLayer();
+    if (!opts.skipFixedLayers) {
+      syncHomeFixedStackLayer();
+      syncHomeFixedMapLabelLayer();
+    }
   }
 
   /** Header scrim + progress bar from one scroll read (home: #home-scrollport, inner: window). */
@@ -3971,22 +4074,20 @@
       false
     );
 
-    document.addEventListener(
-      "mouseover",
-      function (ev) {
-        if (!lotorHome || detailOpen) return;
-        var a = ev.target.closest && ev.target.closest("a.const-label--link[href]");
-        if (!a) return;
-        var href = a.getAttribute("href") || "";
-        if (!isCapabilityDetailHref(href) || prefetched[href]) return;
-        prefetched[href] = true;
-        var link = document.createElement("link");
-        link.rel = "prefetch";
-        link.href = href;
-        document.head.appendChild(link);
-      },
-      true
-    );
+    function warmConstellationLink(ev) {
+      if (!lotorHome || detailOpen) return;
+      var a = ev.target.closest && ev.target.closest("a.const-label--link[href]");
+      if (!a) return;
+      warmSceneLinkHref(a.getAttribute("href") || "");
+    }
+
+    document.addEventListener("mouseover", warmConstellationLink, true);
+    document.addEventListener("focusin", warmConstellationLink, true);
+    document.addEventListener("pointerdown", warmConstellationLink, true);
+    document.addEventListener("touchstart", warmConstellationLink, {
+      capture: true,
+      passive: true,
+    });
 
     document.addEventListener("keydown", function (ev) {
       if (!lotorHome || detailOpen) return;
