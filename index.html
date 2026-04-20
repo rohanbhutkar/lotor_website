@@ -32,9 +32,10 @@
       })();
     </script>
     <link rel="preload" href="sky-manifest.json" as="fetch" crossorigin="anonymous" />
-    <link rel="stylesheet" href="styles.css?v=mobile-1" />
+    <link rel="stylesheet" href="styles.css?v=site-9" />
   </head>
   <body>
+    <a class="skip-link" href="#home-scrollport">Skip to main content</a>
     <!-- Full-viewport sky + scroll-parallax: one map space with #home-scrollport (rebuild: python3 assets/build_hip_layer.py) -->
     <div class="fixed-celestial" id="fixed-celestial" data-sky-map-w="1489" data-sky-map-h="1190">
       <div class="celestial-mover">
@@ -293,17 +294,27 @@
                     <div class="const-deck contact-fo__deck">
                       <div class="const-deck__grid const-deck__grid--contact contact-team" role="list">
                         <article class="const-deck__card contact-card" id="const-contact-email1" role="listitem">
-                          <h3 class="contact-card__name">Michelle Guo</h3>
-                          <p class="contact-card__role">Co-Founder &amp; CEO</p>
-                          <p class="contact-card__prior">Previously Clinical R&amp;D Portfolio Leader at Deloitte</p>
+                          <div class="contact-card__head">
+                            <h3 class="contact-card__name">Michelle Guo</h3>
+                            <p class="contact-card__role">Co-Founder &amp; CEO</p>
+                          </div>
+                          <div class="contact-card__body">
+                            <p class="contact-card__summary">Previously Clinical R&amp;D Portfolio Leader at Deloitte</p>
+                            <p class="contact-card__meta">Computational Biology, UChicago · Epidemiology, Yale</p>
+                          </div>
                           <a class="btn btn-ghost btn-email contact-card__email" href="mailto:michelle@lotorlab.com"
                             >michelle@lotorlab.com</a
                           >
                         </article>
                         <article class="const-deck__card contact-card" id="const-contact-email2" role="listitem">
-                          <h3 class="contact-card__name">Rohan Bhutkar</h3>
-                          <p class="contact-card__role">Co-Founder &amp; CTO</p>
-                          <p class="contact-card__prior">Previously Lead Engineer in Clinical R&amp;D at Deloitte</p>
+                          <div class="contact-card__head">
+                            <h3 class="contact-card__name">Rohan Bhutkar</h3>
+                            <p class="contact-card__role">Co-Founder &amp; CTO</p>
+                          </div>
+                          <div class="contact-card__body">
+                            <p class="contact-card__summary">Previously Lead Engineer in Clinical R&amp;D at Deloitte</p>
+                            <p class="contact-card__meta">Interdepartmental Immunology, McGill · Epidemiology, Imperial</p>
+                          </div>
                           <a class="btn btn-ghost btn-email contact-card__email" href="mailto:rohan@lotorlab.com"
                             >rohan@lotorlab.com</a
                           >
@@ -333,16 +344,30 @@
         var h = parseFloat(fc.getAttribute("data-sky-map-h")) || 1190;
         fc.style.setProperty("--sky-map-w", w + "px");
         fc.style.setProperty("--sky-map-h", h + "px");
-        var vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-        var vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+        var r = typeof fc.getBoundingClientRect === "function" ? fc.getBoundingClientRect() : null;
+        var de = document.documentElement;
+        var rr = de && typeof de.getBoundingClientRect === "function" ? de.getBoundingClientRect() : null;
+        var vw =
+          r && r.width > 1
+            ? Math.round(r.width)
+            : rr && rr.width > 1
+              ? Math.round(rr.width)
+              : Math.round(Math.max(de.clientWidth || 0, window.innerWidth || 0));
+        var vh =
+          r && r.height > 1
+            ? Math.round(r.height)
+            : rr && rr.height > 1
+              ? Math.round(rr.height)
+              : Math.round(Math.max(de.clientHeight || 0, window.innerHeight || 0));
         document.documentElement.style.setProperty("--sky-layout-w", vw + "px");
         document.documentElement.style.setProperty("--sky-layout-h", vh + "px");
+        document.documentElement.style.setProperty("--viewport-w", vw + "px");
+        document.documentElement.style.setProperty("--viewport-h", vh + "px");
         fc.style.setProperty("--sky-cover", String(Math.max(vw / w, vh / h)));
       })();
     </script>
     <div class="ambient-layer" aria-hidden="true"></div>
     <div class="scroll-progress" aria-hidden="true"><span class="scroll-progress__fill"></span></div>
-    <a class="skip-link" href="#home-scrollport">Skip to main content</a>
 
     <header class="site-header">
       <div class="header-inner">
@@ -487,6 +512,6 @@
       <div class="lotor-detail__body"></div>
     </dialog>
 
-    <script src="main.js?v=qual-cap-top-right-1" defer></script>
+    <script src="main.js?v=site-9" defer></script>
   </body>
 </html>

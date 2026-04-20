@@ -21,22 +21,22 @@
         document.documentElement.setAttribute("data-access-state", "locked");
       })();
     </script>
-    <link rel="stylesheet" href="../styles.css?v=mobile-1" />
+    <link rel="stylesheet" href="../styles.css?v=site-7" />
   </head>
-  <body>
-    <div class="fixed-celestial" aria-hidden="true">
+  <body class="page-cap">
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <div class="scroll-progress" aria-hidden="true"><span class="scroll-progress__fill"></span></div>
+    <div class="fixed-celestial" id="fixed-celestial" data-sky-map-w="1489" data-sky-map-h="1190" aria-hidden="true">
       <img
         class="celestial-svg"
         src="../assets/hipparcos_celestial.svg"
         alt=""
-        width="1349"
-        height="1050"
+        width="1489"
+        height="1190"
         decoding="async"
         fetchpriority="low"
       />
     </div>
-    <div class="scroll-progress" aria-hidden="true"><span class="scroll-progress__fill"></span></div>
-    <a class="skip-link" href="#main">Skip to main content</a>
     <header class="site-header">
       <div class="header-inner">
         <a class="nav-brand" href="../index.html#intro">
@@ -233,6 +233,6 @@
         <span class="footer-copy">&copy; <span id="y"></span></span>
       </div>
     </footer>
-    <script src="../main.js" defer></script>
+    <script src="../main.js?v=site-7" defer></script>
   </body>
 </html>
