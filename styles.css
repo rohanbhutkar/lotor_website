@@ -819,9 +819,7 @@ html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .intro-hero__st
 }
 
 html.lotor-home[data-home-intro-layout="single"] .home-fo--intro .hero-cta--below-start {
-  justify-content: center;
-  width: 100%;
-  padding-inline-start: 0;
+  display: none;
 }
 
 html.lotor-home[data-home-intro-density="compact"] .home-fo--intro {
