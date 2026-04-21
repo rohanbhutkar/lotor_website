@@ -141,187 +141,6 @@ html.lotor-home {
   --home-ui-inv-scale: max(var(--sky-map-inv-zoom-floor, 0.57), min(1, calc(1 / var(--sky-zoom, 1))));
 }
 
-html[data-access-state="locked"],
-html[data-access-state="locked"] body {
-  overflow: hidden;
-}
-
-html[data-access-state="locked"] body > * {
-  visibility: hidden;
-}
-
-html[data-access-state="locked"] body > .access-gate,
-html[data-access-state="locked"] body > .access-gate * {
-  visibility: visible;
-}
-
-.access-gate {
-  position: fixed;
-  inset: 0;
-  z-index: 1200;
-  display: grid;
-  place-items: center;
-  isolation: isolate;
-  padding: clamp(1.25rem, 4vw, 2rem);
-  background:
-    radial-gradient(circle at top, rgba(var(--gold-rgb), 0.12), transparent 36%),
-    linear-gradient(180deg, rgba(7, 9, 16, 0.88), rgba(10, 8, 18, 0.97));
-}
-
-.access-gate::before,
-.access-gate::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.access-gate::before {
-  background:
-    radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.12) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 76% 18%, rgba(255, 255, 255, 0.12) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 64% 62%, rgba(255, 255, 255, 0.12) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 28% 74%, rgba(255, 255, 255, 0.12) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 84% 78%, rgba(255, 255, 255, 0.14) 0 1.5px, transparent 2px);
-  opacity: 0.75;
-}
-
-.access-gate::after {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.access-gate__panel {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 31rem);
-  padding: clamp(1.4rem, 4vw, 2.35rem);
-  border: 1px solid rgba(var(--gold-rgb), 0.24);
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(20, 24, 35, 0.9), rgba(11, 13, 23, 0.92)),
-    rgba(11, 13, 23, 0.88);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
-}
-
-.access-gate__brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.85rem;
-  margin-bottom: 1.25rem;
-  color: inherit;
-  text-decoration: none;
-}
-
-.access-gate__mark {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid rgba(var(--gold-rgb), 0.3);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-
-.access-gate__eyebrow {
-  margin: 0 0 0.35rem;
-  color: var(--gold-bright);
-  font-size: 0.78rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.access-gate__brand-name {
-  display: block;
-  font-size: clamp(1.75rem, 4.6vw, 2.2rem);
-  line-height: 1;
-}
-
-.access-gate__title {
-  margin: 0;
-  font-size: clamp(1.7rem, 4.2vw, 2.4rem);
-  line-height: 1.08;
-  color: var(--frost);
-}
-
-.access-gate__copy {
-  margin: 0.9rem 0 0;
-  color: var(--text-dim);
-  max-width: 34ch;
-}
-
-.access-gate__form {
-  display: grid;
-  gap: 0.9rem;
-  margin-top: 1.5rem;
-}
-
-.access-gate__label {
-  font-size: 0.92rem;
-  color: rgba(245, 242, 236, 0.86);
-}
-
-.access-gate__field {
-  width: 100%;
-  padding: 0.9rem 1rem;
-  border: 1px solid rgba(var(--gold-rgb), 0.22);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--frost);
-  font: inherit;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-}
-
-.access-gate__field::placeholder {
-  color: rgba(221, 214, 204, 0.42);
-}
-
-.access-gate__field:focus {
-  outline: none;
-  border-color: rgba(var(--gold-bright-rgb), 0.6);
-  box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.12);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.access-gate__actions {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-}
-
-.access-gate__submit {
-  min-width: 9rem;
-  justify-content: center;
-}
-
-.access-gate__error {
-  min-height: 1.2rem;
-  margin: 0;
-  color: #f0c6bc;
-  font-size: 0.92rem;
-}
-
-@media (max-width: 640px) {
-  .access-gate__panel {
-    border-radius: 20px;
-    padding: 1.2rem;
-  }
-
-  .access-gate__brand {
-    align-items: flex-start;
-  }
-
-  .access-gate__actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .access-gate__submit {
-    width: 100%;
-  }
-}
-
 .brand-mark {
   font-family: var(--font-brand);
   font-style: italic;
@@ -3525,6 +3344,16 @@ html.lotor-home .lotor-scene {
   overflow: hidden;
 }
 
+@media (pointer: fine) {
+  html.lotor-home .home-scrollport {
+    scroll-snap-type: y proximity;
+  }
+
+  html.lotor-home .lotor-scene {
+    scroll-snap-stop: normal;
+  }
+}
+
 html.lotor-home .lotor-scene.is-active {
   z-index: 1;
 }
@@ -3671,18 +3500,10 @@ html.lotor-home .const-deck__grid--contact.contact-team {
   gap: clamp(0.95rem, 2.8vw, 1.25rem);
 }
 
-@media (min-width: 640px) {
-  html.lotor-home .const-deck__grid--contact.contact-team {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 html.lotor-home .contact-card {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  align-content: start;
-  gap: clamp(0.65rem, 1.7vw, 0.9rem);
-  align-items: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   align-self: stretch;
   height: 100%;
   min-height: 0;
@@ -3782,16 +3603,17 @@ html.lotor-home .contact-card__actions {
   display: grid;
   gap: 0.42rem;
   width: 100%;
-  margin-top: auto;
-  padding-top: 0.15rem;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 html.lotor-home .contact-card__email {
   margin-top: 0;
-  align-self: stretch;
-  text-align: left;
-  justify-content: flex-start;
-  width: 100%;
+  align-self: center;
+  text-align: center;
+  justify-content: center;
+  width: auto;
+  max-width: 100%;
   padding: 0.72rem 1rem;
   font-size: clamp(0.88rem, 1.02vw, 0.98rem);
   border-color: rgba(var(--gold-rgb), 0.28);
@@ -4631,8 +4453,67 @@ html.lotor-home .scroll-rail__link .scroll-rail__const {
   margin: 0 auto;
 }
 
+@keyframes lotor-page-transition-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-0.9rem) scale(0.988);
+    filter: blur(10px);
+  }
+}
+
+@keyframes lotor-page-transition-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.1rem) scale(0.994);
+    filter: blur(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html.lotor-page-enter body {
+    animation: lotor-page-transition-in 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: center top;
+  }
+
+  html.lotor-page-leaving body {
+    animation: lotor-page-transition-out 0.24s cubic-bezier(0.3, 0, 0.2, 1) both;
+    transform-origin: center top;
+    pointer-events: none;
+  }
+}
+
 @supports (view-transition-name: none) {
   @media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+      navigation: auto;
+    }
+
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 0.46s;
+      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    ::view-transition-old(root) {
+      animation-name: lotor-page-transition-out;
+    }
+
+    ::view-transition-new(root) {
+      animation-name: lotor-page-transition-in;
+    }
+
     .lotor-detail {
       view-transition-name: lotor-detail-layer;
     }

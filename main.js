@@ -460,94 +460,11 @@
     return Math.round(x * 10000) / 10000;
   }
 
-  var ACCESS_CODE = "yungbae";
-  var ACCESS_SESSION_KEY = "lotor-access-granted-session";
-
-  function readSessionAccessGranted() {
-    try {
-      return !!(window.sessionStorage && window.sessionStorage.getItem(ACCESS_SESSION_KEY) === "true");
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function persistSessionAccessGranted() {
-    try {
-      if (window.sessionStorage) window.sessionStorage.setItem(ACCESS_SESSION_KEY, "true");
-    } catch (e) {}
-  }
-
-  function initAccessGate() {
-    var root = document.documentElement;
-    if (!root || !document.body) return;
-    if (readSessionAccessGranted()) {
-      root.setAttribute("data-access-state", "granted");
-      return;
-    }
-    root.setAttribute("data-access-state", "locked");
-
-    if (document.querySelector(".access-gate")) return;
-
-    var navBrand = document.querySelector(".nav-brand");
-    var mark = document.querySelector(".nav-brand__mark");
-    var homeHref = (navBrand && navBrand.getAttribute("href")) || "#";
-    var markSrc = (mark && mark.getAttribute("src")) || "assets/inspiration/logo-raccoon.png";
-
-    var gate = document.createElement("section");
-    gate.className = "access-gate";
-    gate.setAttribute("role", "dialog");
-    gate.setAttribute("aria-modal", "true");
-    gate.setAttribute("aria-labelledby", "access-gate-title");
-    gate.innerHTML =
-      '<div class="access-gate__panel">' +
-      '<a class="access-gate__brand" href="' +
-      homeHref +
-      '" aria-label="lotor lab home">' +
-      '<img class="access-gate__mark" src="' +
-      markSrc +
-      '" alt="" width="56" height="56" decoding="async" />' +
-      '<span><span class="access-gate__eyebrow">Private Access</span><span class="access-gate__brand-name brand-mark">lotor lab</span></span>' +
-      "</a>" +
-      '<form class="access-gate__form" novalidate>' +
-      '<input id="access-gate-input" class="access-gate__field" name="code" type="password" autocomplete="current-password" spellcheck="false" placeholder="Enter code" />' +
-      '<div class="access-gate__actions">' +
-      '<button class="btn btn-ghost access-gate__submit" type="submit">Enter site</button>' +
-      '<p class="access-gate__error" aria-live="polite"></p>' +
-      "</div>" +
-      "</form>" +
-      "</div>";
-
-    document.body.appendChild(gate);
-
-    var form = gate.querySelector("form");
-    var input = gate.querySelector(".access-gate__field");
-    var error = gate.querySelector(".access-gate__error");
-
-    form.addEventListener("submit", function (ev) {
-      ev.preventDefault();
-      if ((input.value || "") === ACCESS_CODE) {
-        persistSessionAccessGranted();
-        root.setAttribute("data-access-state", "granted");
-        gate.remove();
-        var main = document.getElementById("main");
-        if (main && typeof main.focus === "function") main.focus();
-        return;
-      }
-      error.textContent = "That code didn't match. Please try again.";
-      input.select();
-    });
-
-    window.setTimeout(function () {
-      if (input && typeof input.focus === "function") input.focus();
-    }, 40);
-  }
-
   var y = document.getElementById("y");
   if (y) y.textContent = new Date().getFullYear();
 
   var lotorHome = document.documentElement.classList.contains("lotor-home");
   var pageQual = document.documentElement.classList.contains("page-qual");
-  initAccessGate();
 
   function homeScrollRoot() {
     return lotorHome ? document.getElementById("home-scrollport") : null;
@@ -582,8 +499,105 @@
   var mover = document.querySelector(".celestial-mover");
   var reduceMotionMq = window.matchMedia("(prefers-reduced-motion: reduce)");
   var reduceMotion = reduceMotionMq.matches;
+  var supportsViewTransitionStyles =
+    typeof CSS !== "undefined" && CSS.supports && CSS.supports("view-transition-name", "none");
+  var supportsNativePageNavigationTransitions =
+    supportsViewTransitionStyles && ("onpageswap" in window || "onpagereveal" in window);
+  var PAGE_TRANSITION_FALLBACK_MS = 240;
+  var pageTransitionExitTimer = 0;
+  var pageTransitionEnterTimer = 0;
 
   var ZOOM_MAX = 2.35;
+
+  function shouldUsePageTransitionFallback() {
+    return !reduceMotion && !supportsNativePageNavigationTransitions;
+  }
+
+  function clearPageTransitionClasses() {
+    var root = document.documentElement;
+    root.classList.remove("lotor-page-enter");
+    root.classList.remove("lotor-page-leaving");
+  }
+
+  function triggerPageEnterFallback() {
+    if (!shouldUsePageTransitionFallback()) {
+      clearPageTransitionClasses();
+      return;
+    }
+    var root = document.documentElement;
+    root.classList.remove("lotor-page-leaving");
+    root.classList.remove("lotor-page-enter");
+    void root.offsetWidth;
+    root.classList.add("lotor-page-enter");
+    if (pageTransitionEnterTimer) clearTimeout(pageTransitionEnterTimer);
+    pageTransitionEnterTimer = setTimeout(function () {
+      pageTransitionEnterTimer = 0;
+      root.classList.remove("lotor-page-enter");
+    }, 560);
+  }
+
+  function navigateWithPageTransition(url, opts) {
+    opts = opts || {};
+    var absUrl;
+    try {
+      absUrl = new URL(url, location.href);
+    } catch (e) {
+      return false;
+    }
+    if (pageTransitionExitTimer) {
+      clearTimeout(pageTransitionExitTimer);
+      pageTransitionExitTimer = 0;
+    }
+    if (!shouldUsePageTransitionFallback()) {
+      try {
+        if (opts.replace) location.replace(absUrl.href);
+        else location.href = absUrl.href;
+      } catch (e) {}
+      return true;
+    }
+    document.documentElement.classList.remove("lotor-page-enter");
+    document.documentElement.classList.add("lotor-page-leaving");
+    pageTransitionExitTimer = setTimeout(function () {
+      pageTransitionExitTimer = 0;
+      try {
+        if (opts.replace) location.replace(absUrl.href);
+        else location.href = absUrl.href;
+      } catch (e) {
+        try {
+          location.href = absUrl.href;
+        } catch (e2) {}
+      }
+    }, typeof opts.delayMs === "number" ? opts.delayMs : PAGE_TRANSITION_FALLBACK_MS);
+    return true;
+  }
+
+  function shouldAnimatePageLink(a, ev) {
+    if (!a || ev.defaultPrevented) return false;
+    if (ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return false;
+    if (a.hasAttribute("download")) return false;
+    var target = (a.getAttribute("target") || "").toLowerCase();
+    if (target && target !== "_self") return false;
+    var raw = a.getAttribute("href") || "";
+    if (!raw || raw === "#" || raw.charAt(0) === "#") return false;
+    var url;
+    try {
+      url = new URL(raw, location.href);
+    } catch (e) {
+      return false;
+    }
+    if (url.origin !== location.origin) return false;
+    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+    if (url.pathname === location.pathname && url.search === location.search) return false;
+    if (url.href === location.href) return false;
+    return true;
+  }
+
+  requestAnimationFrame(function () {
+    triggerPageEnterFallback();
+  });
+  window.addEventListener("pageshow", function (ev) {
+    if (ev.persisted) triggerPageEnterFallback();
+  });
 
   function applySkyMapSize() {
     if (!fixedCelestial) return;
@@ -3123,6 +3137,30 @@
   var programmaticScrollIdleTimer = null;
   /** Before initHomeAfterManifest, header/progress still need #home-scrollport scroll. */
   var homeScrollChromeOnlyFn = null;
+  var homeSceneOrder = [];
+  var homeSwipeSceneGesture = {
+    tracking: false,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    lastY: 0,
+    scrollable: null,
+  };
+  var homeSwipeSuppressClickUntil = 0;
+  var HOME_SWIPE_MIN_DELTA_PX = 56;
+  var HOME_SWIPE_CLICK_SUPPRESS_MS = 420;
+  var homeOverlayWheelCarryY = 0;
+  var homeOverlayWheelSceneDeltaY = 0;
+  var homeOverlayWheelSceneResetTimer = null;
+  var homeOverlayWheelSceneCooldownUntil = 0;
+  var HOME_OVERLAY_WHEEL_SCENE_THRESHOLD = 40;
+  var HOME_OVERLAY_WHEEL_SCENE_RESET_MS = 220;
+  var HOME_OVERLAY_WHEEL_SCENE_COOLDOWN_MS = 420;
+
+  sceneSections.forEach(function (sec) {
+    var sid = sec.getAttribute("data-scene");
+    if (sid) homeSceneOrder.push(sid);
+  });
 
   function beginProgrammaticScrollTo(sceneId) {
     programmaticScrollSceneId = sceneId;
@@ -3187,6 +3225,289 @@
       return;
     }
     applySkyForScene(activeSceneId);
+  }
+
+  function sceneIdAtOffset(baseId, delta) {
+    var order = homeSceneOrder.length ? homeSceneOrder : ["intro", "capabilities", "quals", "contact"];
+    var ix = order.indexOf(baseId);
+    if (ix < 0) ix = 0;
+    var next = Math.max(0, Math.min(order.length - 1, ix + delta));
+    return next === ix ? "" : order[next];
+  }
+
+  function normalizeHomeSceneScrollBehavior(behavior) {
+    if (reduceMotion) return "auto";
+    if (behavior === "instant") return "auto";
+    return behavior || "smooth";
+  }
+
+  function scrollHomeSceneIntoView(id, behavior) {
+    if (!id) return false;
+    var el = document.getElementById(id);
+    if (!el) return false;
+    var root = homeScrollRoot();
+    if (!root) {
+      el.scrollIntoView({ block: "start", behavior: normalizeHomeSceneScrollBehavior(behavior) });
+      return true;
+    }
+    var top = Math.max(0, el.offsetTop);
+    var scrollBehavior = normalizeHomeSceneScrollBehavior(behavior);
+    if (scrollBehavior === "auto") {
+      root.scrollTop = top;
+      return true;
+    }
+    if (typeof root.scrollTo === "function") {
+      root.scrollTo({ top: top, behavior: scrollBehavior });
+      return true;
+    }
+    root.scrollTop = top;
+    return true;
+  }
+
+  function goToHomeScene(id, behavior, opts) {
+    opts = opts || {};
+    if (!id || !document.querySelector('.lotor-scene[data-scene="' + id + '"]')) return false;
+    beginProgrammaticScrollTo(id);
+    if (!scrollHomeSceneIntoView(id, behavior)) {
+      clearProgrammaticScrollLock();
+      return false;
+    }
+    setScene(id, {});
+    if (!opts.skipPulse) pulseSkyJump();
+    scheduleHistoryScene(id);
+    return true;
+  }
+
+  function editableTouchTarget(target) {
+    if (!target || !target.closest) return null;
+    return target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="textbox"]');
+  }
+
+  function homeSwipeOverlayTarget(target) {
+    if (!lotorHome || detailOpen || !target) return false;
+    if (editableTouchTarget(target)) return false;
+    if (target.closest && target.closest(".site-header, .lotor-detail[open]")) return false;
+    var scrollRoot = homeScrollRoot();
+    if (scrollRoot && scrollRoot.contains(target)) return false;
+    var stackLayer =
+      homeFixedStackLayer && homeFixedStackLayer.isConnected
+        ? homeFixedStackLayer
+        : document.querySelector(".home-fixed-stack-layer");
+    var mapLabelLayer =
+      homeFixedMapLabelLayer && homeFixedMapLabelLayer.isConnected
+        ? homeFixedMapLabelLayer
+        : document.querySelector(".home-fixed-map-label-layer");
+    return !!(
+      (stackLayer && stackLayer.contains(target)) ||
+      (mapLabelLayer && mapLabelLayer.contains(target)) ||
+      (fixedCelestial && fixedCelestial.contains(target))
+    );
+  }
+
+  function homeSwipeScrollableAncestor(target) {
+    var stop = homeScrollRoot();
+    var el = target && target.nodeType === 1 ? target : target && target.parentElement;
+    while (el && el !== document.body) {
+      if (el === stop) return null;
+      var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+      var oy = style ? style.overflowY : "";
+      if ((oy === "auto" || oy === "scroll" || oy === "overlay") && el.scrollHeight > el.clientHeight + 6) {
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function canScrollElementForDelta(el, deltaY) {
+    if (!el || !deltaY) return false;
+    if (deltaY < 0) return el.scrollTop > 2;
+    return el.scrollTop + el.clientHeight < el.scrollHeight - 2;
+  }
+
+  function resetHomeOverlayWheelCarry() {
+    homeOverlayWheelCarryY = 0;
+  }
+
+  function resetHomeOverlayWheelSceneGesture() {
+    homeOverlayWheelSceneDeltaY = 0;
+    if (homeOverlayWheelSceneResetTimer) {
+      clearTimeout(homeOverlayWheelSceneResetTimer);
+      homeOverlayWheelSceneResetTimer = null;
+    }
+  }
+
+  function normalizeWheelAxisDelta(delta, deltaMode) {
+    if (!delta) return 0;
+    if (deltaMode === 1) return delta * 16;
+    if (deltaMode === 2) return delta * (window.innerHeight || 800);
+    return delta;
+  }
+
+  function normalizeWheelDeltaY(ev) {
+    return normalizeWheelAxisDelta(ev.deltaY, ev.deltaMode);
+  }
+
+  function normalizeWheelDeltaX(ev) {
+    return normalizeWheelAxisDelta(ev.deltaX, ev.deltaMode);
+  }
+
+  function isPredominantlyHorizontalHomeWheel(ev, deltaY) {
+    var deltaX = normalizeWheelDeltaX(ev);
+    if (!deltaX) return false;
+    return Math.abs(deltaX) > Math.max(8, Math.abs(deltaY) * 1.35);
+  }
+
+  function consumeHomeOverlayWheelStep(deltaY) {
+    if (!deltaY) return 0;
+    if (homeOverlayWheelCarryY && (homeOverlayWheelCarryY > 0) !== (deltaY > 0)) {
+      homeOverlayWheelCarryY = 0;
+    }
+    var next = homeOverlayWheelCarryY + deltaY;
+    var step = next < 0 ? Math.ceil(next) : Math.floor(next);
+    homeOverlayWheelCarryY = next - step;
+    if (Math.abs(homeOverlayWheelCarryY) < 0.001) homeOverlayWheelCarryY = 0;
+    return step;
+  }
+
+  function handleForcedHomeOverlayWheelSceneScroll(deltaY) {
+    if (!deltaY) return false;
+    var now = Date.now();
+    if (homeOverlayWheelSceneCooldownUntil && now < homeOverlayWheelSceneCooldownUntil) return true;
+    if (homeOverlayWheelSceneDeltaY && (homeOverlayWheelSceneDeltaY > 0) !== (deltaY > 0)) {
+      homeOverlayWheelSceneDeltaY = 0;
+    }
+    homeOverlayWheelSceneDeltaY += deltaY;
+    if (homeOverlayWheelSceneResetTimer) clearTimeout(homeOverlayWheelSceneResetTimer);
+    homeOverlayWheelSceneResetTimer = setTimeout(function () {
+      homeOverlayWheelSceneResetTimer = null;
+      homeOverlayWheelSceneDeltaY = 0;
+    }, HOME_OVERLAY_WHEEL_SCENE_RESET_MS);
+    if (Math.abs(homeOverlayWheelSceneDeltaY) < HOME_OVERLAY_WHEEL_SCENE_THRESHOLD) return true;
+    var baseId = dominantSceneId() || activeSceneId;
+    var targetId = sceneIdAtOffset(baseId, homeOverlayWheelSceneDeltaY > 0 ? 1 : -1);
+    resetHomeOverlayWheelSceneGesture();
+    homeOverlayWheelSceneCooldownUntil = now + HOME_OVERLAY_WHEEL_SCENE_COOLDOWN_MS;
+    if (!targetId) return true;
+    goToHomeScene(targetId, "smooth");
+    return true;
+  }
+
+  function shouldForceHomeOverlayWheelToSceneScroll() {
+    var root = document.documentElement;
+    var mapMode = root.getAttribute("data-home-map-mode") || "anchored";
+    var boxMode = root.getAttribute("data-home-box-mode") || "anchored";
+    return mapMode !== "stacked" && boxMode !== "stacked";
+  }
+
+  function routeHomeOverlayWheel(ev) {
+    if (!lotorHome || detailOpen) {
+      resetHomeOverlayWheelCarry();
+      resetHomeOverlayWheelSceneGesture();
+      return;
+    }
+    if (!homeSwipeOverlayTarget(ev.target)) {
+      resetHomeOverlayWheelCarry();
+      resetHomeOverlayWheelSceneGesture();
+      return;
+    }
+    var deltaY = normalizeWheelDeltaY(ev);
+    if (!deltaY) {
+      resetHomeOverlayWheelCarry();
+      resetHomeOverlayWheelSceneGesture();
+      return;
+    }
+    if (isPredominantlyHorizontalHomeWheel(ev, deltaY)) {
+      resetHomeOverlayWheelCarry();
+      resetHomeOverlayWheelSceneGesture();
+      return;
+    }
+    var scrollable = homeSwipeScrollableAncestor(ev.target);
+    if (!shouldForceHomeOverlayWheelToSceneScroll() && scrollable && canScrollElementForDelta(scrollable, deltaY)) {
+      resetHomeOverlayWheelCarry();
+      resetHomeOverlayWheelSceneGesture();
+      return;
+    }
+    var root = homeScrollRoot();
+    if (!root) {
+      resetHomeOverlayWheelCarry();
+      resetHomeOverlayWheelSceneGesture();
+      return;
+    }
+    ev.preventDefault();
+    if (shouldForceHomeOverlayWheelToSceneScroll()) {
+      resetHomeOverlayWheelCarry();
+      handleForcedHomeOverlayWheelSceneScroll(deltaY);
+      return;
+    }
+    resetHomeOverlayWheelSceneGesture();
+    var step = consumeHomeOverlayWheelStep(deltaY);
+    if (!step) return;
+    root.scrollTop += step;
+  }
+
+  function resetHomeSwipeSceneGesture() {
+    homeSwipeSceneGesture.tracking = false;
+    homeSwipeSceneGesture.startX = 0;
+    homeSwipeSceneGesture.startY = 0;
+    homeSwipeSceneGesture.lastX = 0;
+    homeSwipeSceneGesture.lastY = 0;
+    homeSwipeSceneGesture.scrollable = null;
+  }
+
+  function beginHomeSwipeSceneGesture(ev) {
+    if (!lotorHome || detailOpen || !ev.touches || ev.touches.length !== 1) {
+      resetHomeSwipeSceneGesture();
+      return;
+    }
+    var target = ev.target;
+    if (!homeSwipeOverlayTarget(target)) {
+      resetHomeSwipeSceneGesture();
+      return;
+    }
+    var touch = ev.touches[0];
+    homeSwipeSceneGesture.tracking = true;
+    homeSwipeSceneGesture.startX = touch.clientX;
+    homeSwipeSceneGesture.startY = touch.clientY;
+    homeSwipeSceneGesture.lastX = touch.clientX;
+    homeSwipeSceneGesture.lastY = touch.clientY;
+    homeSwipeSceneGesture.scrollable = homeSwipeScrollableAncestor(target);
+  }
+
+  function trackHomeSwipeSceneGesture(ev) {
+    if (!homeSwipeSceneGesture.tracking || !ev.touches || ev.touches.length !== 1) return;
+    var touch = ev.touches[0];
+    homeSwipeSceneGesture.lastX = touch.clientX;
+    homeSwipeSceneGesture.lastY = touch.clientY;
+  }
+
+  function finishHomeSwipeSceneGesture(ev) {
+    if (!homeSwipeSceneGesture.tracking) return;
+    var changed = ev.changedTouches && ev.changedTouches.length ? ev.changedTouches[0] : null;
+    var endX = changed ? changed.clientX : homeSwipeSceneGesture.lastX;
+    var endY = changed ? changed.clientY : homeSwipeSceneGesture.lastY;
+    var dx = endX - homeSwipeSceneGesture.startX;
+    var dy = endY - homeSwipeSceneGesture.startY;
+    var absX = Math.abs(dx);
+    var absY = Math.abs(dy);
+    var scrollable = homeSwipeSceneGesture.scrollable;
+    resetHomeSwipeSceneGesture();
+
+    var minDelta = Math.max(HOME_SWIPE_MIN_DELTA_PX, Math.min(96, (window.innerHeight || 0) * 0.08));
+    if (absY < minDelta) return;
+    if (absY < absX * 1.2) return;
+
+    if (scrollable) {
+      var atTop = scrollable.scrollTop <= 2;
+      var atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 2;
+      if ((dy < 0 && !atBottom) || (dy > 0 && !atTop)) return;
+    }
+
+    var baseId = dominantSceneId() || activeSceneId;
+    var targetId = sceneIdAtOffset(baseId, dy < 0 ? 1 : -1);
+    if (!targetId) return;
+    homeSwipeSuppressClickUntil = Date.now() + HOME_SWIPE_CLICK_SUPPRESS_MS;
+    goToHomeScene(targetId, "smooth");
   }
 
   function setScene(id, opts) {
@@ -3329,39 +3650,51 @@
     document.documentElement.style.setProperty("--ambient-scroll", String(round4(Math.min(1, Math.max(0, p)))));
   }
 
-  function scheduleDominantSceneCheck() {
+  function runDominantSceneCheck() {
+    var d = dominantSceneId();
+    var needsFollowup = false;
+    if (d !== activeSceneId) {
+      if (programmaticScrollSceneId && d !== programmaticScrollSceneId) {
+        /* Smooth scroll in progress: viewport still reads previous section. */
+        dominantSceneHoldCandidate = null;
+        dominantSceneHoldCount = 0;
+      } else {
+        if (d === dominantSceneHoldCandidate) {
+          dominantSceneHoldCount++;
+        } else {
+          dominantSceneHoldCandidate = d;
+          dominantSceneHoldCount = 1;
+        }
+        if (dominantSceneHoldCount >= DOMINANT_SCENE_HOLD_FRAMES) {
+          setScene(d, {});
+          dominantSceneHoldCandidate = null;
+          dominantSceneHoldCount = 0;
+        } else {
+          needsFollowup = true;
+        }
+      }
+    } else {
+      dominantSceneHoldCandidate = null;
+      dominantSceneHoldCount = 0;
+    }
+    if (programmaticScrollSceneId && d === programmaticScrollSceneId && activeSceneId === programmaticScrollSceneId) {
+      clearProgrammaticScrollLock();
+    }
+    scheduleHistoryScene(d);
+    return needsFollowup;
+  }
+
+  function scheduleDominantSceneCheck(opts) {
+    opts = opts || {};
     if (scrollScheduled) return;
     scrollScheduled = true;
     requestAnimationFrame(function () {
       scrollScheduled = false;
       if (detailOpen) return;
-      var d = dominantSceneId();
-      if (d !== activeSceneId) {
-        if (programmaticScrollSceneId && d !== programmaticScrollSceneId) {
-          /* Smooth scroll in progress: viewport still reads previous section. */
-          dominantSceneHoldCandidate = null;
-          dominantSceneHoldCount = 0;
-        } else {
-          if (d === dominantSceneHoldCandidate) {
-            dominantSceneHoldCount++;
-          } else {
-            dominantSceneHoldCandidate = d;
-            dominantSceneHoldCount = 1;
-          }
-          if (dominantSceneHoldCount >= DOMINANT_SCENE_HOLD_FRAMES) {
-            setScene(d, {});
-            dominantSceneHoldCandidate = null;
-            dominantSceneHoldCount = 0;
-          }
-        }
-      } else {
-        dominantSceneHoldCandidate = null;
-        dominantSceneHoldCount = 0;
+      var needsFollowup = runDominantSceneCheck();
+      if (needsFollowup && (opts.followupDepth || 0) < DOMINANT_SCENE_HOLD_FRAMES) {
+        scheduleDominantSceneCheck({ followupDepth: (opts.followupDepth || 0) + 1 });
       }
-      if (programmaticScrollSceneId && d === programmaticScrollSceneId && activeSceneId === programmaticScrollSceneId) {
-        clearProgrammaticScrollLock();
-      }
-      scheduleHistoryScene(d);
     });
   }
 
@@ -3684,9 +4017,7 @@
     opts = opts || {};
     relPath = normalizeDetailPath(relPath);
     if (isQualPageHref(relPath)) {
-      try {
-        location.href = relPath;
-      } catch (e) {}
+      navigateWithPageTransition(relPath);
       return;
     }
     if (!detailDialog || !detailBodyEl) return;
@@ -3892,10 +4223,9 @@
       var id = ph.id || "intro";
       setScene(id, {});
       beginProgrammaticScrollTo(id);
-      var el = document.getElementById(id);
-      if (el) {
+      if (document.getElementById(id)) {
         requestAnimationFrame(function () {
-          el.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "instant" });
+          scrollHomeSceneIntoView(id, "instant");
           requestAnimationFrame(function () {
             clearProgrammaticScrollLock();
           });
@@ -3942,6 +4272,7 @@
 
     function onHomeScrollEnd() {
       clearProgrammaticScrollLock();
+      scheduleDominantSceneCheck();
     }
 
     var scrollHomeEl = homeScrollRoot();
@@ -3995,9 +4326,8 @@
       var id = ph.id || "intro";
       setScene(id, {});
       beginProgrammaticScrollTo(id);
-      var el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "auto" });
+      if (document.getElementById(id)) {
+        scrollHomeSceneIntoView(id, "auto");
         requestAnimationFrame(function () {
           requestAnimationFrame(function () {
             clearProgrammaticScrollLock();
@@ -4047,14 +4377,7 @@
           var nt = document.querySelector(".nav-toggle");
           if (nt) nt.setAttribute("aria-expanded", "false");
         }
-        beginProgrammaticScrollTo(id);
-        var target = document.getElementById(id);
-        if (target) {
-          target.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
-        }
-        setScene(id, {});
-        pulseSkyJump();
-        scheduleHistoryScene(id);
+        goToHomeScene(id, "smooth");
       },
       false
     );
@@ -4088,6 +4411,37 @@
       capture: true,
       passive: true,
     });
+    document.addEventListener("touchstart", beginHomeSwipeSceneGesture, {
+      capture: true,
+      passive: true,
+    });
+    document.addEventListener("touchmove", trackHomeSwipeSceneGesture, {
+      capture: true,
+      passive: true,
+    });
+    document.addEventListener("touchend", finishHomeSwipeSceneGesture, {
+      capture: true,
+      passive: true,
+    });
+    document.addEventListener("touchcancel", resetHomeSwipeSceneGesture, {
+      capture: true,
+      passive: true,
+    });
+    document.addEventListener("wheel", routeHomeOverlayWheel, {
+      capture: true,
+      passive: false,
+    });
+    document.addEventListener(
+      "click",
+      function (ev) {
+        if (!homeSwipeSuppressClickUntil || Date.now() > homeSwipeSuppressClickUntil) return;
+        if (!homeSwipeOverlayTarget(ev.target)) return;
+        homeSwipeSuppressClickUntil = 0;
+        ev.preventDefault();
+        ev.stopPropagation();
+      },
+      true
+    );
 
     document.addEventListener("keydown", function (ev) {
       if (!lotorHome || detailOpen) return;
@@ -4108,13 +4462,7 @@
       else next = Math.max(0, ix - 1);
       if (next === ix) return;
       ev.preventDefault();
-      var tid = order[next];
-      beginProgrammaticScrollTo(tid);
-      var el = document.getElementById(tid);
-      if (el) el.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
-      setScene(tid, {});
-      pulseSkyJump();
-      scheduleHistoryScene(tid);
+      goToHomeScene(order[next], "smooth");
     });
 
     if (detailDialog) {
@@ -4148,6 +4496,7 @@
 
     function onMotionChange() {
       reduceMotion = reduceMotionMq.matches;
+      if (reduceMotion) clearPageTransitionClasses();
       if (reduceMotion) document.documentElement.classList.add("lotor-sky-ready");
       if (!detailOpen) {
         applySkyForScene(activeSceneId);
@@ -4194,6 +4543,18 @@
         }
       });
   }
+
+  document.addEventListener(
+    "click",
+    function (ev) {
+      var a = ev.target.closest && ev.target.closest("a[href]");
+      if (!a) return;
+      if (!shouldAnimatePageLink(a, ev)) return;
+      ev.preventDefault();
+      navigateWithPageTransition(a.href);
+    },
+    false
+  );
 
   /* ─── Shared chrome ─── */
   var header = document.querySelector(".site-header");

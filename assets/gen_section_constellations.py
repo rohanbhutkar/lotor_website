@@ -218,20 +218,16 @@ QUALS_LABELS = {
 TEAM_TREE = [(32362, 35350), (35350, 35550), (35550, 37826)]
 TEAM_LABELS = {
     32362: (
-        "michelle",
-        "Michelle Guo",
-        "Co-founder &amp; CEO · Clinical R&amp;D portfolio leadership, Deloitte. UChicago, Yale.<br />"
-        '<a href="mailto:michelle@lotorlab.com">michelle@lotorlab.com</a> · '
-        '<a href="tel:+16103894218">+1 610-389-4218</a> · '
-        '<a href="https://www.linkedin.com/in/michellelguo/" rel="noopener noreferrer">LinkedIn</a>',
+        "contact-team-1",
+        "info@lotorlab.com",
+        "General inquiries · Clinical strategy, access, and program leadership.<br />"
+        '<a href="mailto:info@lotorlab.com">info@lotorlab.com</a>',
     ),
     37826: (
-        "rohan",
-        "Rohan Bhutkar",
-        "Co-founder &amp; CTO · Lead engineer Clinical R&amp;D, Deloitte. McGill, Imperial.<br />"
-        '<a href="mailto:rohan@lotorlab.com">rohan@lotorlab.com</a> · '
-        '<a href="tel:+19178901984">+1 917-890-1984</a> · '
-        '<a href="https://www.linkedin.com/in/rohan-bhutkar/" rel="noopener noreferrer">LinkedIn</a>',
+        "contact-team-2",
+        "info@lotorlab.com",
+        "Technical inquiries · Engineering, AI/ML evidence systems, and technical diligence.<br />"
+        '<a href="mailto:info@lotorlab.com">info@lotorlab.com</a>',
     ),
 }
 
@@ -239,16 +235,9 @@ TEAM_LABELS = {
 CONTACT_TREE = [(37279, 36188)]
 CONTACT_LABELS = {
     37279: (
-        "email1",
-        "Michelle",
-        '<a class="btn btn-primary btn-email" href="mailto:michelle@lotorlab.com">michelle@lotorlab.com</a><br />'
-        "<span>Clinical strategy, access, and program leadership.</span>",
-    ),
-    36188: (
-        "email2",
-        "Rohan",
-        '<a class="btn btn-primary btn-email" href="mailto:rohan@lotorlab.com">rohan@lotorlab.com</a><br />'
-        "<span>Engineering, AI/ML evidence systems, and technical diligence.</span>",
+        "email",
+        "",
+        '<a class="btn btn-primary btn-email" href="mailto:info@lotorlab.com">info@lotorlab.com</a>',
     ),
 }
 
